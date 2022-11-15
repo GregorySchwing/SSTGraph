@@ -11,6 +11,7 @@
 #include "algorithms/PageRank.h"
 #include "algorithms/TC.h"
 #include "algorithms/Touchall.h"
+#include "algorithms/VC.h"
 #include "helpers.h"
 #include "parallel.h"
 #include "rmat_util.h"
@@ -643,6 +644,7 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
   uint64_t cc_milles = 0;
   uint64_t tc_milles = 0;
   uint64_t bf_milles = 0;
+  uint64_t vc_milles = 0;
   uint64_t add_batch[10] = {0};
   /*
   for (uint32_t i = 0; i < num_edges; i++) {
@@ -686,6 +688,15 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
   printf("size = %lu bytes, number of edges = %lu, number of nodes = %u\n",
          size, g.M(), num_nodes);
   g.print_statistics();
+
+#if 1 
+  printf("start vc\n");
+  start = get_usecs();
+  int32_t *parallel_vc_result = VC_with_edge_map(g);
+  end = get_usecs();
+  printf("time to vc %lu micros\n",
+         end - start);
+#endif
 
 #if 1
   start = get_usecs();
@@ -853,6 +864,7 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
     free(bf_values);
   }
 #endif
+
 // batch updates
 #if 1
   auto r = random_aspen();
@@ -1145,6 +1157,22 @@ bool real_graph_static_test(const std::string &filename,
     printf("graph has no vertices\n");
     return false;
   }
+  
+#if 1
+  int32_t *parallel_vc_result = VC_with_edge_map(g);
+  free(parallel_vc_result);
+  start = get_usecs();
+  for (int i = 0; i < iters; i++) {
+    int32_t *parallel_bfs_result = VC_with_edge_map(g);
+    free(parallel_bfs_result);
+  }
+  end = get_usecs();
+  printf("tinyset, %d, VC, %d, %s, %s, %f\n", iters, start_node,
+          filename.c_str(), run_info.c_str(),
+          ((double)(end - start)) / (1000000 * iters));
+  fprintf(stderr, "VC done\n");
+#endif
+
 #if 1
   auto *values3 = PR_S<double>(g, 10);
   free(values3);
@@ -1733,3 +1761,4 @@ void matrix_values_add_remove_test(
   matrix_values_add_remove_test_templated<float>(el_count, row_count, check);
   matrix_values_add_remove_test_templated<double>(el_count, row_count, check);
 }
+                                                                                                                                           

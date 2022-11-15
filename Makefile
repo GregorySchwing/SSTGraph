@@ -57,7 +57,7 @@ DEFINES := -DOPENMP=$(OPENMP) -DCILK=$(CILK) -DTINYSET_32=$(TINYSET_32) -DNO_INL
 
 SRC := run.cpp
 
-INCLUDES := TinySet_small.h  helpers.h  parallel.h  rmat_util.h  BitArray.hpp  PMA.hpp  SparseMatrix.hpp  TinySet.hpp  TinySet_small.hpp  VertexSubset.hpp  cxxopts.hpp  packedarray.hpp  test.hpp algorithms/BC.h  algorithms/BFS.h  algorithms/BellmanFord.h  algorithms/Components.h  algorithms/PageRank.h  algorithms/TC.h  algorithms/Touchall.h integerSort/blockRadixSort.h  integerSort/sequence.h  integerSort/transpose.h  integerSort/utils.h gap/sliding_queue.h
+INCLUDES := TinySet_small.h  helpers.h  parallel.h  rmat_util.h  BitArray.hpp  PMA.hpp  SparseMatrix.hpp  TinySet.hpp  TinySet_small.hpp  VertexSubset.hpp  cxxopts.hpp  packedarray.hpp  test.hpp algorithms/BC.h  algorithms/BFS.h  algorithms/VC.h  algorithms/BellmanFord.h  algorithms/Components.h  algorithms/PageRank.h  algorithms/TC.h  algorithms/Touchall.h integerSort/blockRadixSort.h  integerSort/sequence.h  integerSort/transpose.h  integerSort/utils.h gap/sliding_queue.h
 
 .PHONY: all clean tidy
 
