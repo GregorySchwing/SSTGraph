@@ -24,13 +24,15 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // vertex map function to mark visited vertexSubset
-template <typename T>
+template <typename T, typename SM> 
 struct VC_Vertex_F {
   T *inCover;
-  explicit VC_Vertex_F(T *_inCover) : inCover(_inCover) {}
+  const SM &G;
+
+  explicit VC_Vertex_F(T *_inCover, const SM &_G) : inCover(_inCover), G(_G) {}
   inline bool operator()(uintE i) {
-    inCover[i] = 1;
-    return true;
+    inCover[i] = G.getDegree(i) > 0;
+    return G.getDegree(i) > 0;
   }
 };
 
@@ -109,11 +111,12 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
   VertexSubset remaining_vertices =
       VertexSubset(0, n, true); // initial set contains all vertices
   while (remaining_vertices.non_empty()) { // loop until set of remaining vertices is empty
-    // Not sure which of these is faster. probably the vMap.
-    //parallel_for(int64_t i = 0; i < n; i++) { inCover[i] = G.getDegree(i) > 0; }
-    G.vertexMap(remaining_vertices, VC_Vertex_F(inCover), false); // mark visited
-    G.edgeMap(remaining_vertices, VC_ROUND_1_F(inCover, G), true, 20);
-    remaining_vertices = G.edgeMap(remaining_vertices, VC_ROUND_2_F(inCover, solution, G), true, 20);
+    // Set inCover array (I)
+    G.edgeMap(remaining_vertices, VC_ROUND_1_F(inCover, G), false, 20);
+    VertexSubset remaining_vertices_I = G.edgeMap(remaining_vertices, VC_ROUND_2_F(inCover, solution, G), true, 20);
+    // remove degree zero vertices
+    VertexSubset nonzero_degree_remaining_vertices = G.vertexMap(remaining_vertices_I, VC_Vertex_F(inCover, G), true); // mark visited
+    remaining_vertices = nonzero_degree_remaining_vertices;
     remaining_vertices.print();
   }
   remaining_vertices.del();
