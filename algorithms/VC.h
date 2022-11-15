@@ -23,6 +23,17 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+// vertex map function to mark visited vertexSubset
+template <typename T>
+struct VC_Vertex_F {
+  T *inCover;
+  explicit VC_Vertex_F(T *_inCover) : inCover(_inCover) {}
+  inline bool operator()(uintE i) {
+    inCover[i] = 1;
+    return true;
+  }
+};
+
 template <typename T, typename SM> struct VC_ROUND_1_F {
   T *inCover;
   // vertex* V;
@@ -45,12 +56,9 @@ template <typename T, typename SM> struct VC_ROUND_1_F {
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     return __sync_bool_compare_and_swap(&inCover[d], -1, s);
   }
-  // cond function checks if vertex has non-zero degree
+  // cond function checks if vertex in remaining vertices set has non-zero degree
   inline bool cond(uint32_t d) {
-    if (G.getDegree(d) > 0){
-      return true;
-    }
-    return false;
+    return G.getDegree(d) > 0;
   }
 };
   
@@ -101,7 +109,9 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
   VertexSubset remaining_vertices =
       VertexSubset(0, n, true); // initial set contains all vertices
   while (remaining_vertices.non_empty()) { // loop until set of remaining vertices is empty
-    parallel_for(int64_t i = 0; i < n; i++) { inCover[i] = G.getDegree(i) > 0; }
+    // Not sure which of these is faster. probably the vMap.
+    //parallel_for(int64_t i = 0; i < n; i++) { inCover[i] = G.getDegree(i) > 0; }
+    G.vertexMap(remaining_vertices, VC_Vertex_F(inCover), false); // mark visited
     G.edgeMap(remaining_vertices, VC_ROUND_1_F(inCover, G), true, 20);
     remaining_vertices = G.edgeMap(remaining_vertices, VC_ROUND_2_F(inCover, solution, G), true, 20);
     remaining_vertices.print();
