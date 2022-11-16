@@ -164,21 +164,21 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
     // Read phase
     // Set inCover array (I)
     G.edgeMap(remaining_vertices, VC_ROUND_1_F(inCover, G), false, 20);
-    remaining_vertices.print();
+    //remaining_vertices.print();
     VertexSubset remaining_vertices_I = G.edgeMap(remaining_vertices, VC_ROUND_2_F(inCover, solution, edgesToRemove, &b_used, &b_size, G), true, 20);
-    remaining_vertices_I.print();
-    printf("B4\n");
-    for(int64_t i = 0; i < n; i++) { printf("%u ", G.getDegree(i)); }
-    printf("\n");
+    //remaining_vertices_I.print();
+    //printf("B4\n");
+    //for(int64_t i = 0; i < n; i++) { printf("%u ", G.getDegree(i)); }
+    //printf("\n");
     // Write phase
     G.remove_batch(edgesToRemove, b_used);
     // remove degree zero vertices
-    printf("after\n");
-    for(int64_t i = 0; i < n; i++) { printf("%u ", G.getDegree(i)); }
-    printf("\n");
+    //printf("after\n");
+    //for(int64_t i = 0; i < n; i++) { printf("%u ", G.getDegree(i)); }
+    //printf("\n");
     VertexSubset nonzero_degree_remaining_vertices = G.vertexMap(remaining_vertices_I, VC_Vertex_F(inCover, G), true); // mark visited
     remaining_vertices = nonzero_degree_remaining_vertices;
-    remaining_vertices.print();
+    //remaining_vertices.print();
     b_used = 0;
   }
   remaining_vertices.del();
