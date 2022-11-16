@@ -67,19 +67,28 @@ template <typename T, typename SM> struct VC_ROUND_1_F {
 template <typename T, typename SM> struct VC_ROUND_2_F {
   T *inCover;
   T *solution;
-
+  T *numToEdgesRemove;
+  T *maxNumToEdgesRemove;
+  std::tuple<el_t, el_t> *edgesToRemove;
   // vertex* V;
   // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
   SM &G;
-  VC_ROUND_2_F(T *_inCover, T *_solution, SM &_G) : inCover(_inCover), solution(_solution), G(_G)  {}
+  VC_ROUND_2_F(T *_inCover, T *_solution, std::tuple<el_t, el_t> *_edgesToRemove, 
+  T *_numToEdgesRemove, T *_maxNumToEdgesRemove, SM &_G) : 
+  inCover(_inCover), solution(_solution), 
+  maxNumToEdgesRemove(_maxNumToEdgesRemove),
+  numToEdgesRemove(_numToEdgesRemove),
+  edgesToRemove(_edgesToRemove),
+  G(_G)  {}
   inline bool update(uint32_t s, uint32_t d) { // Update
     if (inCover[d]) {
       solution[d] = 1;
-      G.remove(d,s);
+      edgesToRemove[*numToEdgesRemove] = std::tuple<el_t, el_t>{s, d};
+      ++(*numToEdgesRemove);
+      edgesToRemove[*numToEdgesRemove] = std::tuple<el_t, el_t>{d, s};
+      ++(*numToEdgesRemove);
       return false;
-    } else if (inCover[s]){
-      G.remove(s,d);
-    } 
+    }
     return true;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
@@ -98,8 +107,16 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
     return nullptr;
   }
   // creates inCover array, initialized to all -1, except for start
+  int32_t b_size = 10000; 
+  int32_t b_used = 0; 
+  std::tuple<el_t, el_t> *edgesToRemove = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
+
   int32_t *inCover = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *solution = (int32_t *)malloc(n * sizeof(int32_t));
+  
+  // Need to do batch removes, by virtue of how edges need to exist for 
+  // edge map to find the edges to remove.
+  //std::vector<std::tuple<el_t, el_t>> es(b_size);
   // MEMSET all to 1
   // The plan is to have all nondegree 0 vertices start in the cover, and then exclude most of them.
   parallel_for(int64_t i = 0; i < n; i++) { inCover[i] = 1; }
@@ -111,13 +128,23 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
   VertexSubset remaining_vertices =
       VertexSubset(0, n, true); // initial set contains all vertices
   while (remaining_vertices.non_empty()) { // loop until set of remaining vertices is empty
+    // Read phase
     // Set inCover array (I)
     G.edgeMap(remaining_vertices, VC_ROUND_1_F(inCover, G), false, 20);
-    VertexSubset remaining_vertices_I = G.edgeMap(remaining_vertices, VC_ROUND_2_F(inCover, solution, G), true, 20);
+    VertexSubset remaining_vertices_I = G.edgeMap(remaining_vertices, VC_ROUND_2_F(inCover, solution, edgesToRemove, &b_used, &b_size, G), true, 20);
+    //printf("B4\n");
+    //for(int64_t i = 0; i < n; i++) { printf("%u ", G.getDegree(i)); }
+    //printf("\n");
+    // Write phase
+    G.remove_batch(edgesToRemove, b_used);
     // remove degree zero vertices
+    //printf("after\n");
+    //for(int64_t i = 0; i < n; i++) { printf("%u ", G.getDegree(i)); }
+    //printf("\n");
     VertexSubset nonzero_degree_remaining_vertices = G.vertexMap(remaining_vertices_I, VC_Vertex_F(inCover, G), true); // mark visited
     remaining_vertices = nonzero_degree_remaining_vertices;
     remaining_vertices.print();
+    b_used = 0;
   }
   remaining_vertices.del();
   free(inCover);
