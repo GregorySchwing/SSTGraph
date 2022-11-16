@@ -143,7 +143,7 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
     //printf("\n");
     VertexSubset nonzero_degree_remaining_vertices = G.vertexMap(remaining_vertices_I, VC_Vertex_F(inCover, G), true); // mark visited
     remaining_vertices = nonzero_degree_remaining_vertices;
-    remaining_vertices.print();
+    //remaining_vertices.print();
     b_used = 0;
   }
   remaining_vertices.del();
