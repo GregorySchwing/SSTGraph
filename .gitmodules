@@ -1,0 +1,3 @@
+[submodule "comparison/VCGPU"]
+	path = comparison/VCGPU
+	url = https://github.com/GregorySchwing/Parallel-Vertex-Cover-Algorithms-on-GPUs.git
