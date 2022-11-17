@@ -60,6 +60,10 @@ template <typename T, typename SM> struct VC_ROUND_1_F {
     looks at incoming edges to see if the source is part of the
     vertex set. This does not require locking because each vertex
     only updates itself and is preferred when the vertex set is large.
+
+    I am the destination.  I only update inCover[d].
+    Degrees are const in this class.
+
   */
 
   inline bool update(uint32_t s, uint32_t d) { // Update
@@ -81,6 +85,10 @@ template <typename T, typename SM> struct VC_ROUND_1_F {
     and updates the destination vertex for each edge. Because it is
     run in parallel, synchronization must be used when accessing
     the destination vertex data.
+
+    I am the source.  I update inCover[d] using synchronization.
+    Degrees are const in this class.
+
   */
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     if (G.getDegree(s) > G.getDegree(d)) {
@@ -191,18 +199,18 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
     // Read phase
     // Set inCover array (I)
     G.edgeMap(remaining_vertices, VC_ROUND_1_F(inCover, G), false, 20);
-    //remaining_vertices.print();
+    // This loop is neccessary since the array of edges to remove must be preallocated.
+    // Therefore, in cases where the number of edges to remove exceeds preallocated amount,
+    // a series of batches are required.
     do {
       b_used = 0;
       // returns vertices to delete
       vertices_to_delete = G.edgeMap(remaining_vertices, VC_ROUND_2_F(inCover, solution, edgesToRemove, &b_used, &b_size, G), true, 20);
-      vertices_to_delete.print();
       // Write phase
       G.remove_batch(edgesToRemove, b_used);
     } while(vertices_to_delete.non_empty());
     VertexSubset nonzero_degree_remaining_vertices = G.vertexMap(remaining_vertices, VC_Vertex_F(inCover, G), true); // mark visited
     remaining_vertices = nonzero_degree_remaining_vertices;
-    //remaining_vertices.print();
   }
   remaining_vertices.del();
   free(inCover);
