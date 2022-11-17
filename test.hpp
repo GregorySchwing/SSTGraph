@@ -694,6 +694,17 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
   start = get_usecs();
   int32_t *parallel_vc_result = VC_with_edge_map(g);
   end = get_usecs();
+  printf("VC: ");
+  for (uint32_t j = 0; j < num_nodes; j++) {
+    if (parallel_vc_result[j])
+      printf("%lu ", j);
+  }
+  printf("\n");
+  int32_t vc_count = 0;
+  for (int j = 0; j < g.get_rows(); j++) {
+    vc_count += parallel_vc_result[j];
+  }
+  printf("VC size : %u\n", vc_count);
   printf("time to vc %lu micros\n",
          end - start);
 #endif
@@ -1160,11 +1171,21 @@ bool real_graph_static_test(const std::string &filename,
   
 #if 1
   int32_t *parallel_vc_result = VC_with_edge_map(g);
+  int32_t vc_count = 0;
+  for (int j = 0; j < g.get_rows(); j++) {
+    vc_count += parallel_vc_result[j];
+  }
+  printf("VC size : %u\n", vc_count);
   free(parallel_vc_result);
   start = get_usecs();
   for (int i = 0; i < iters; i++) {
-    int32_t *parallel_bfs_result = VC_with_edge_map(g);
-    free(parallel_bfs_result);
+    int32_t *parallel_vc_result = VC_with_edge_map(g);
+    int32_t vc_count = 0;
+    for (int j = 0; j < g.get_rows(); j++) {
+      vc_count += parallel_vc_result[j];
+    }
+    printf("VC size : %u\n", vc_count);
+    free(parallel_vc_result);
   }
   end = get_usecs();
   printf("tinyset, %d, VC, %d, %s, %s, %f\n", iters, start_node,
@@ -1761,4 +1782,3 @@ void matrix_values_add_remove_test(
   matrix_values_add_remove_test_templated<float>(el_count, row_count, check);
   matrix_values_add_remove_test_templated<double>(el_count, row_count, check);
 }
-                                                                                                                                           
