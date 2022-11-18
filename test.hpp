@@ -695,10 +695,10 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
   int32_t *parallel_vc_result = VC_with_edge_map(g);
   end = get_usecs();
   printf("VC: ");
-  for (uint32_t j = 0; j < num_nodes; j++) {
-    if (parallel_vc_result[j])
-      printf("%lu ", j);
-  }
+  //for (uint32_t j = 0; j < num_nodes; j++) {
+  //  if (parallel_vc_result[j])
+  //    printf("%lu ", j);
+  //}
   printf("\n");
   int32_t vc_count = 0;
   for (int j = 0; j < g.get_rows(); j++) {
