@@ -162,7 +162,7 @@ template <typename T, typename SM> struct VC_ROUND_2_F {
         edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
 
     }
-    return inCover[d] && G.getDegree(d)>0;
+    return inCover[d] && G.getDegree(d);
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     if (inCover[s] && G.getDegree(s)){
@@ -260,7 +260,7 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
         firstBatchIteration = false;
       }
       // Write phase
-      G.remove_batch(edgesToRemove, b_used);
+      G.remove_batch(edgesToRemove, min(b_used, b_size));
       printf("b_used : %d \n",b_used);
       printf("vertices_to_delete : %d \n",vertices_to_delete.get_n());
       progressBar.printIterationBar(vertices_to_delete.get_n());
