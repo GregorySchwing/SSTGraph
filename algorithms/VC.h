@@ -261,8 +261,8 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
       }
       // Write phase
       G.remove_batch(edgesToRemove, min(b_used, b_size));
-      printf("b_used : %d \n",b_used);
-      printf("vertices_to_delete : %d \n",vertices_to_delete.get_n());
+      //printf("b_used : %d \n",b_used);
+      //printf("vertices_to_delete : %d \n",vertices_to_delete.get_n());
       progressBar.printIterationBar(vertices_to_delete.get_n());
     } while(vertices_to_delete.non_empty());
     std::cout << std::endl;
