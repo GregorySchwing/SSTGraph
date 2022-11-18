@@ -1,5 +1,9 @@
 #pragma once
 #include "../SparseMatrix.hpp"
+#include "../ProgressBar.h"
+#include <stdio.h>
+#include <unistd.h>
+#include <termios.h>
 // This code is part of the project "Ligra: A Lightweight Graph Processing
 // Framework for Shared Memory", presented at Principles and Practice of
 // Parallel Programming, 2013.
@@ -170,6 +174,15 @@ template <typename T, typename SM> struct VC_ROUND_2_F {
 
 
 template <typename SM> int32_t *VC_with_edge_map(SM &G) {
+
+  // Prevent terminal input messing up progress bar display
+  printf("\nDisabling keyboard input\n");
+  struct termios oldT, newT;
+  tcgetattr(STDIN_FILENO, &oldT);          // get current settings
+  newT = oldT;                              // create a backup
+  newT.c_lflag &= ~(ICANON | ECHO);        // disable line buffering and feedback
+  tcsetattr(STDIN_FILENO, TCSANOW, &newT); // set our new config
+
   int64_t n = G.get_rows();
   if (n == 0) {
     return nullptr;
@@ -193,6 +206,8 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
   if (n == 0) {
     return solution;
   }
+  ProgressBar progressBar;
+  progressBar.setAlgorithmStartSize(n);
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
   VertexSubset vertices_to_delete;
   while (remaining_vertices.non_empty()) { // loop until set of remaining vertices is empty
@@ -202,18 +217,33 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
     // This loop is neccessary since the array of edges to remove must be preallocated.
     // Therefore, in cases where the number of edges to remove exceeds preallocated amount,
     // a series of batches are required.
+    bool firstBatchIteration = true; 
     do {
       b_used = 0;
       // returns vertices to delete
       vertices_to_delete = G.edgeMap(remaining_vertices, VC_ROUND_2_F(inCover, solution, edgesToRemove, &b_used, &b_size, G), true, 20);
+      if (firstBatchIteration){
+        progressBar.setIterationStartSize(vertices_to_delete.get_n());
+        firstBatchIteration = false;
+      }
       // Write phase
       G.remove_batch(edgesToRemove, b_used);
+      //printf("vertices_to_delete : %d \n",vertices_to_delete.get_n());
+      progressBar.printIterationBar(vertices_to_delete.get_n());
     } while(vertices_to_delete.non_empty());
+    std::cout << std::endl;
     VertexSubset nonzero_degree_remaining_vertices = G.vertexMap(remaining_vertices, VC_Vertex_F(inCover, G), true); // mark visited
     remaining_vertices = nonzero_degree_remaining_vertices;
+    progressBar.printAlgorithmBar(remaining_vertices.get_n());
+    std::cout << std::endl;
+    //printf("Remaining vertices : %d \n",remaining_vertices.get_n());
   }
   remaining_vertices.del();
   free(inCover);
   free(edgesToRemove);
+
+  printf("\nRestoring terminal config\n");
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldT);
+
   return solution;
 }
