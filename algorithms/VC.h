@@ -132,70 +132,42 @@ template <typename T, typename SM> struct VC_ROUND_2_F {
   edgesToRemove(_edgesToRemove),
   G(_G)  {}
   inline bool update(uint32_t s, uint32_t d) { // Update
-    if (inCover[d] && G.getDegree(d)){
+    bool deletedEdge = false;
+    if (inCover[d]){
       solution[d] = 1;
-      /*
       if (G.has(s,d)){
         uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
         if (edgeIndex < *maxNumToEdgesRemove) 
           edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
-        //deletedEdge = true;
-      } else {
-        //printf("Failed to remove edge.  Batch size exceeded!");
-        //exit(1);
+        deletedEdge = true;
       }
       if (G.has(d,s)){
         uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
         if (edgeIndex < *maxNumToEdgesRemove) 
           edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
-        //deletedEdge = true;
-      } else {
-        //printf("Failed to remove edge.  Batch size exceeded!");
-        //exit(1);
+        deletedEdge = true;
       }
-      */
-      uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
-      if (edgeIndex < *maxNumToEdgesRemove) 
-        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
-      edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
-      if (edgeIndex < *maxNumToEdgesRemove) 
-        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
-
     }
-    return inCover[d] && G.getDegree(d);
+    return deletedEdge;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    if (inCover[s] && G.getDegree(s)){
+    bool deletedEdge = false;
+    if (inCover[s]){
       solution[s] = 1;
-      /*
       if (G.has(s,d)){
         uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
         if (edgeIndex < *maxNumToEdgesRemove) 
           edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
         deletedEdge = true;
-      } else {
-        //printf("Failed to remove edge.  Batch size exceeded!");
-        //exit(1);
       }
       if (G.has(d,s)){
         uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
         if (edgeIndex < *maxNumToEdgesRemove) 
           edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
         deletedEdge = true;
-      } else {
-        //printf("Failed to remove edge.  Batch size exceeded!");
-        //exit(1);
       }
-      */
-      uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
-      if (edgeIndex < *maxNumToEdgesRemove) 
-        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
-      edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
-      if (edgeIndex < *maxNumToEdgesRemove) 
-        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
-
     }
-    return inCover[s] && G.getDegree(s);
+    return deletedEdge;
   }
   
   // cond function checks if vertex has non-zero degree
