@@ -220,11 +220,11 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
     G.edgeMap(remaining_vertices, VC_ROUND_1_F(inCover, G), false, 20);
     // This loop is neccessary since the array of edges to remove must be preallocated.
     // Therefore, in cases where the number of edges to remove exceeds preallocated amount,
-    // a series of batches are required.
+    // a series of batch removes are required.
     bool firstBatchIteration = true; 
     do {
       b_used = 0;
-      __sync_fetch_and_and(&b_used, 0);
+      //__sync_fetch_and_and(&b_used, 0);
       // returns vertices to delete
       vertices_to_delete = G.edgeMap(remaining_vertices, VC_ROUND_2_F(inCover, solution, edgesToRemove, &b_used, &b_size, G), true, 20);
       if (firstBatchIteration){
