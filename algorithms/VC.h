@@ -28,6 +28,14 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // vertex map function to mark visited vertexSubset
+
+el_t h(el_t x){
+  x = ((x >> 16)^x)*0x45d9f3b;
+  x = ((x >> 16)^x)*0x45d9f3b;
+  x = ((x >> 16)^x);
+  return x;
+}
+
 template <typename T, typename SM> 
 struct VC_Vertex_F {
   T *inCover;
@@ -75,7 +83,7 @@ template <typename T, typename SM> struct VC_ROUND_1_F {
       inCover[d] = 0;
       return false;
     } else if (G.getDegree(s) == G.getDegree(d)){
-      inCover[d] &= s < d;
+      inCover[d] &= h(s) < h(d);
       return false;
     } else {
       // Start at 1, no need to set
@@ -100,7 +108,7 @@ template <typename T, typename SM> struct VC_ROUND_1_F {
       __sync_fetch_and_and(&inCover[d], 0);
       return false;
     } else if (G.getDegree(s) == G.getDegree(d)){
-      __sync_fetch_and_and(&inCover[d], s < d);
+      __sync_fetch_and_and(&inCover[d], h(s) < h(d));
       return false;
     } else {
       // Start at 1, no need to set
