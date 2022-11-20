@@ -1,6 +1,7 @@
 #ifndef PROGRESSBAR_H
 #define PROGRESSBAR_H
 
+#include <inttypes.h>
 #include <iostream>
 class ProgressBar {
     public:
@@ -28,6 +29,14 @@ class ProgressBar {
             int rpad = PBWIDTH - lpad;
             printf("\rAlgorithm %3d%% [%.*s%*s]", val, lpad, PBSTR, rpad, "");
             fflush(stdout);
+        }
+        void printNumberOfRemainingVertices(int64_t algorithmProgress){
+            printf("\33[2K\rAlgorithm %" PRIu64 "(remaining vertices)", algorithmProgress, "");
+            fflush(stdout);
+        }
+        float getAlgorithmPercentage(int64_t algorithmProgress){
+            float percentage = (1.0-(float(algorithmProgress)/float(algorithmStartSize)))*100.0;
+            return percentage;
         }
     private:
         int64_t iterationStartSize;

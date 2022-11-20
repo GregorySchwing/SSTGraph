@@ -222,25 +222,31 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
     // Therefore, in cases where the number of edges to remove exceeds preallocated amount,
     // a series of batch removes are required.
     bool firstBatchIteration = true; 
+    float percentage = progressBar.getAlgorithmPercentage(remaining_vertices.get_n());
     do {
       b_used = 0;
       //__sync_fetch_and_and(&b_used, 0);
       // returns vertices to delete
       vertices_to_delete = G.edgeMap(remaining_vertices, VC_ROUND_2_F(inCover, solution, edgesToRemove, &b_used, &b_size, G), true, 20);
-      if (firstBatchIteration){
+      if (firstBatchIteration && percentage < 95.0){
         progressBar.setIterationStartSize(vertices_to_delete.get_n());
         firstBatchIteration = false;
       }
       // Write phase
       G.remove_batch(edgesToRemove, min(b_used, b_size));
-      progressBar.printIterationBar(vertices_to_delete.get_n());
+      if(percentage < 95.0)
+        progressBar.printIterationBar(vertices_to_delete.get_n());
     } while(vertices_to_delete.non_empty());
-    std::cout << std::endl;
     VertexSubset nonzero_degree_remaining_vertices = G.vertexMap(remaining_vertices, VC_Vertex_F(inCover, G), true); // mark visited
     remaining_vertices = nonzero_degree_remaining_vertices;
-    progressBar.printAlgorithmBar(remaining_vertices.get_n());
-    std::cout << std::endl;
-    //printf("Remaining vertices : %d \n",remaining_vertices.get_n());
+    if (percentage < 95.0) {
+      // Make sure iteration bar and algorithm bar are on separate lines
+      std::cout << std::endl;
+      progressBar.printAlgorithmBar(remaining_vertices.get_n());
+      std::cout << std::endl;
+    } else {
+      progressBar.printNumberOfRemainingVertices(remaining_vertices.get_n());
+    }
   }
   remaining_vertices.del();
   free(inCover);
