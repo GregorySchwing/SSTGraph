@@ -715,6 +715,8 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
   //    printf("%lu ", j);
   //}
   printf("\n");
+  bool validSolution = Check_VC_with_edge_map(parallel_vc_result, g2);
+  printf("VC is valid solution : %s\n", validSolution ? "true" : "false");
   int32_t vc_count = 0;
   for (int j = 0; j < g.get_rows(); j++) {
     vc_count += parallel_vc_result[j];

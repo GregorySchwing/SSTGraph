@@ -85,24 +85,49 @@ template <typename T, typename SM> struct LEAF_REDUCTION_RULE_F {
   G(_G)  {}
   inline bool update(uint32_t s, uint32_t d) { // Update
     bool deletedEdge = false;
+    // I'm a leaf
     if (inCover[d]){
-      solution[s] = 1;
-      if (G.has(s,d)){
-        uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
-        if (edgeIndex < *maxNumToEdgesRemove) 
-          edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
-        deletedEdge = true;
-      }
-      if (G.has(d,s)){
-        uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
-        if (edgeIndex < *maxNumToEdgesRemove) 
-          edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
-        deletedEdge = true;
+      //printf("LEAF %u %"PRIu32"\n", d, G.getDegree(d));
+      // and you're a leaf
+      if (inCover[s]){
+        //printf("DOUBLE LEAF %u %u (%"PRIu32") (%"PRIu32")\n", s, d, G.getDegree(s), G.getDegree(d));
+        // tiebreak
+        if (h(s) < h(d)){
+          solution[d] = 1;
+          if (G.has(s,d)){
+            uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+            if (edgeIndex < *maxNumToEdgesRemove) 
+              edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
+            deletedEdge = true;
+          }
+          if (G.has(d,s)){
+            uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+            if (edgeIndex < *maxNumToEdgesRemove) 
+              edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
+            deletedEdge = true;
+          }
+        }          
+      } else {
+        solution[s] = 1;
+        if (G.has(s,d)){
+          uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+          if (edgeIndex < *maxNumToEdgesRemove) 
+            edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
+          deletedEdge = true;
+        }
+        if (G.has(d,s)){
+          uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+          if (edgeIndex < *maxNumToEdgesRemove) 
+            edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
+          deletedEdge = true;
+        }        
       }
     }
     return deletedEdge;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    printf("USED ATOMIC\n");
+    exit(1);
     bool deletedEdge = false;
     if (inCover[s]){
       solution[d] = 1;
@@ -344,7 +369,7 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
 	bool hasEdges = true;
 	while (hasEdges)
 	{
-    /*
+
 		bool leafHasChanged = false, triangleHasChanged = false;
 		unsigned int iterationCounter = 0;
 		do {
@@ -361,7 +386,7 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
         approxGraph.remove_batch(edgesToRemove, min(b_used, b_size));
         leaves = approxGraph.vertexMap(remaining_vertices, SET_LEAVES_F(inCover, approxGraph), true); // mark visited
       }
-
+    /*
       VertexSubset triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
       //printf("NumPossTri %u\n",possibleTriangles.get_n());
 			while (triangles.non_empty()) { // loop until no leaves remain
@@ -375,6 +400,8 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
       }
 		} while (leafHasChanged || triangleHasChanged);
     */
+		} while (leafHasChanged);
+
 		int32_t maxV;
 		int32_t maxD = 0;
 		for (unsigned int i = 0; i < n; i++)
@@ -411,12 +438,6 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
 		}
 
 	}
-  int32_t vc_count = 0;
-  for (int j = 0; j < n; j++) {
-    vc_count += solution[j];
-  }
-  printf("VC size : %u\n", vc_count);
-  exit(1);
   // Destructor is automatically called
 	//approxGraph.del();
   free(edgesToRemove);

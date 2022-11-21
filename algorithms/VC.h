@@ -184,6 +184,41 @@ template <typename T, typename SM> struct VC_ROUND_2_F {
   }
 };
 
+  
+template <typename T, typename SM> struct CHECK_SOLUTION_F {
+  T *solution;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  CHECK_SOLUTION_F(T *_solution, SM &_G) : 
+  solution(_solution),
+  G(_G)  {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    bool notCovered = true;
+    for(int64_t i = 0; i < G.get_rows(); i++) { 
+      if (solution[i] == s || solution[i] == d){
+        notCovered = false;
+        break;
+      }; 
+    }
+    return notCovered;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    bool notCovered = true;
+    for(int64_t i = 0; i < G.get_rows(); i++) { 
+      if (solution[i] == s || solution[i] == d){
+        notCovered = false;
+        break;
+      }; 
+    }
+    return notCovered;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
 
 template <typename SM> int32_t *VC_with_edge_map(SM &G) {
 
@@ -264,4 +299,10 @@ template <typename SM> int32_t *VC_with_edge_map(SM &G) {
   tcsetattr(STDIN_FILENO, TCSANOW, &oldT);
 
   return solution;
+}
+
+template <typename SM> bool Check_VC_with_edge_map(int32_t *solution, SM &G) {
+  VertexSubset remaining_vertices = VertexSubset(0, G.get_rows(), true); // initial set contains all vertices
+  VertexSubset uncoveredEdges = G.edgeMap(remaining_vertices, CHECK_SOLUTION_F(solution, G), true, 20);
+  return uncoveredEdges.non_empty();
 }
