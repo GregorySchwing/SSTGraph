@@ -93,6 +93,8 @@ template <typename T, typename SM> struct LEAF_REDUCTION_RULE_F {
         //printf("DOUBLE LEAF %u %u (%"PRIu32") (%"PRIu32")\n", s, d, G.getDegree(s), G.getDegree(d));
         // tiebreak
         if (h(s) < h(d)){
+          //printf("SINCE DOUBLE LEAF %u %u (%"PRIu32") (%"PRIu32") only add %u\n", s, d, G.getDegree(s), G.getDegree(d), d);
+
           solution[d] = 1;
           if (G.has(s,d)){
             uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
@@ -249,13 +251,13 @@ template <typename T, typename SM> struct SET_TRIANGLES_F {
   inline bool update(uint32_t s, uint32_t d) { // Update
     // Assuming I am not a neighbor to myself,
     // thus G.common_neighbors(s,d) > 0 indicates a triangle.
-    isTriangle[d] |= G.getDegree(d) == 2 && G.common_neighbors(s,d);
+    isTriangle[d] = G.getDegree(d) == 2 && G.common_neighbors(s,d);
     return isTriangle[d];
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     // Assuming I am not a neighbor to myself,
     // thus G.common_neighbors(s,d) > 0 indicates a triangle.
-    isTriangle[s] |= G.getDegree(s) == 2 && G.common_neighbors(s,d);
+    isTriangle[s] = G.getDegree(s) == 2 && G.common_neighbors(s,d);
     return isTriangle[s];
   }
   
@@ -288,7 +290,7 @@ template <typename T, typename SM> struct TRIANGLE_REDUCTION_RULE_F {
     // Assuming I am not a neighbor to myself,
     // thus G.common_neighbors(s,d) > 0 indicates a triangle.
     if (isTriangle[d]){
-      solution[d] = 1;
+      solution[s] = 1;
       if (G.has(s,d)){
         uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
         if (edgeIndex < *maxNumToEdgesRemove) 
@@ -307,7 +309,7 @@ template <typename T, typename SM> struct TRIANGLE_REDUCTION_RULE_F {
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     bool deletedEdge = false;
     if (isTriangle[s]){
-      solution[s] = 1;
+      solution[d] = 1;
       if (G.has(s,d)){
         uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
         if (edgeIndex < *maxNumToEdgesRemove) 
@@ -369,7 +371,6 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
 	bool hasEdges = true;
 	while (hasEdges)
 	{
-
 		bool leafHasChanged = false, triangleHasChanged = false;
 		unsigned int iterationCounter = 0;
 		do {
@@ -386,9 +387,7 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
         approxGraph.remove_batch(edgesToRemove, min(b_used, b_size));
         leaves = approxGraph.vertexMap(remaining_vertices, SET_LEAVES_F(inCover, approxGraph), true); // mark visited
       }
-    /*
       VertexSubset triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
-      //printf("NumPossTri %u\n",possibleTriangles.get_n());
 			while (triangles.non_empty()) { // loop until no leaves remain
         b_used = 0; 
         vertices_to_delete = approxGraph.edgeMap(triangles, TRIANGLE_REDUCTION_RULE_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
@@ -399,8 +398,6 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
         triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
       }
 		} while (leafHasChanged || triangleHasChanged);
-    */
-		} while (leafHasChanged);
 
 		int32_t maxV;
 		int32_t maxD = 0;
@@ -436,10 +433,15 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
       } while(vertices_to_delete.non_empty());
 			++minimum;
 		}
-
 	}
   // Destructor is automatically called
 	//approxGraph.del();
+  int32_t vc_count = 0;
+  for (int j = 0; j < approxGraph.get_rows(); j++) {
+    vc_count += solution[j];
+  }
+  printf("\nVC_Red size : %u\n", vc_count);
+  exit(1);
   free(edgesToRemove);
   free(inCover);
   free(solution);
