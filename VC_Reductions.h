@@ -87,13 +87,13 @@ struct BF_LEAVES_F {
   inline bool update(uintE s, uintE d) {
     if (isLeaf[s] > isLeaf[d]) {
       if (inCover[d] == 0) {
-        printf("DELETE LEAF %d %d\n",s,d);
+        //printf("DELETE LEAF %d %d\n",s,d);
         inCover[d] = 1;
         return 1;
       }
     } else if (isLeaf[s] && isLeaf[d] && h(s) < h(d)){
         if (inCover[d] == 0) {
-        printf("DELETE LEAF %d %d\n",s,d);
+        //printf("DELETE LEAF %d %d\n",s,d);
         inCover[d] = 1;
         return 1;
       }
@@ -301,8 +301,8 @@ struct SET_MAX_VERTEX_F {
   explicit SET_MAX_VERTEX_F(T *_inCover, T _maxV, const SM &_G) : inCover(_inCover), maxV(_maxV), G(_G) {}
   inline bool operator()(uintE i) {
     inCover[i] = i == maxV;
-    if (i == maxV)
-      printf("DELETE MAX %d (%d)\n",i, G.getDegree(i));
+    //if (i == maxV)
+    //  printf("DELETE MAX %d (%d)\n",i, G.getDegree(i));
     return inCover[i];
   }
 };
@@ -523,13 +523,16 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
 
       approxGraph.vertexMap(remaining_vertices, SET_LEAVES_1_F(isLeaf, approxGraph), false); // mark visited
       VertexSubset leaves = approxGraph.edgeMap(remaining_vertices, BF_LEAVES_F(isLeaf, inCover), true, 20);
+      /*
       if (leaves.non_empty()){
         for (unsigned int i = 0; i < n; i++)
           printf("%d ", approxGraph.getDegree(i));
         printf("\n");
       }
+      */
       
       while (leaves.non_empty()) { // loop until no leaves remain
+        leafHasChanged = true;
         b_used = 0;
         //__sync_fetch_and_and(&b_used, 0);
         // returns vertices to delete
@@ -559,6 +562,7 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
       leaves = approxGraph.edgeMap(remaining_vertices, BF_TRIANGLES_F(isLeaf, inCover), true, 20);
 
       while (triangles.non_empty()) { // loop until no leaves remain
+        triangleHasChanged = true;
         b_used = 0;
         // returns vertices to delete
         vertices_to_delete = approxGraph.edgeMap(remaining_vertices, DELETE_VERTEX_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
@@ -588,8 +592,8 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
         triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
       }
       */
-		//} while (leafHasChanged || triangleHasChanged);
-		} while (leafHasChanged);
+		} while (leafHasChanged || triangleHasChanged);
+		//} while (leafHasChanged);
 
 		int32_t maxV;
 		int32_t maxD = 0;
@@ -605,9 +609,11 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
 			hasEdges = false;
 		else
 		{
+      /*
       for (unsigned int i = 0; i < n; i++)
         printf("%d ", approxGraph.getDegree(i));
       printf("\n");
+      */
       VertexSubset maxVSet = approxGraph.vertexMap(remaining_vertices, SET_MAX_VERTEX_F(inCover, maxV, approxGraph), true); // mark visited
 			//approxGraph.deleteVertex(maxV);
       bool firstBatchIteration = true; 
