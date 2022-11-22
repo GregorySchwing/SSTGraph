@@ -94,6 +94,7 @@ template <typename T, typename SM> struct LEAF_REDUCTION_RULE_F {
         // tiebreak
         if (h(s) < h(d)){
           //printf("SINCE DOUBLE LEAF %u %u (%"PRIu32") (%"PRIu32") only add %u\n", s, d, G.getDegree(s), G.getDegree(d), d);
+          printf("DELETE LEAF %d %d (%d) (%d)\n",d, s, G.getDegree(d), G.getDegree(s));
 
           solution[d] = 1;
           if (G.has(s,d)){
@@ -111,6 +112,7 @@ template <typename T, typename SM> struct LEAF_REDUCTION_RULE_F {
         }          
       } else {
         solution[s] = 1;
+        printf("DELETE LEAF %d %d (%d) (%d)\n",s,d, G.getDegree(s), G.getDegree(d));
         if (G.has(s,d)){
           uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
           if (edgeIndex < *maxNumToEdgesRemove) 
@@ -165,6 +167,8 @@ struct SET_MAX_VERTEX_F {
   explicit SET_MAX_VERTEX_F(T *_inCover, T _maxV, const SM &_G) : inCover(_inCover), maxV(_maxV), G(_G) {}
   inline bool operator()(uintE i) {
     inCover[i] = i == maxV;
+    if (i == maxV)
+      printf("DELETE MAX %d (%d)\n",i, G.getDegree(i));
     return inCover[i];
   }
 };
@@ -291,6 +295,7 @@ template <typename T, typename SM> struct TRIANGLE_REDUCTION_RULE_F {
     // thus G.common_neighbors(s,d) > 0 indicates a triangle.
     if (isTriangle[d]){
       solution[s] = 1;
+      printf("DELETE TRI %d\n",s);
       if (G.has(s,d)){
         uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
         if (edgeIndex < *maxNumToEdgesRemove) 
@@ -309,6 +314,7 @@ template <typename T, typename SM> struct TRIANGLE_REDUCTION_RULE_F {
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     bool deletedEdge = false;
     if (isTriangle[s]){
+      printf("DELETE TRI %d\n",d);
       solution[d] = 1;
       if (G.has(s,d)){
         uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
@@ -376,13 +382,18 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
 		do {
       leafHasChanged = false;
       triangleHasChanged = false;
+
       VertexSubset leaves = approxGraph.vertexMap(remaining_vertices, SET_LEAVES_F(inCover, approxGraph), true); // mark visited
       //printf("NumLeaves %u\n",leaves.get_n());
 			while (leaves.non_empty()) { // loop until no leaves remain
         b_used = 0; 
+        for (unsigned int i = 0; i < n; i++)
+          printf("%d ", approxGraph.getDegree(i));
+        printf("\n");
         vertices_to_delete = approxGraph.edgeMap(remaining_vertices, LEAF_REDUCTION_RULE_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
-        if (vertices_to_delete.non_empty())
+        if (vertices_to_delete.non_empty()){
           leafHasChanged = true;
+        }
         // Write phase
         approxGraph.remove_batch(edgesToRemove, min(b_used, b_size));
         leaves = approxGraph.vertexMap(remaining_vertices, SET_LEAVES_F(inCover, approxGraph), true); // mark visited
@@ -390,9 +401,13 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
       VertexSubset triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
 			while (triangles.non_empty()) { // loop until no leaves remain
         b_used = 0; 
+        for (unsigned int i = 0; i < n; i++)
+          printf("%d ", approxGraph.getDegree(i));
+        printf("\n");
         vertices_to_delete = approxGraph.edgeMap(triangles, TRIANGLE_REDUCTION_RULE_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
-        if (vertices_to_delete.non_empty())
+        if (vertices_to_delete.non_empty()){
           triangleHasChanged = true;
+        }
         // Write phase
         approxGraph.remove_batch(edgesToRemove, min(b_used, b_size));
         triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
@@ -413,6 +428,9 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
 			hasEdges = false;
 		else
 		{
+      for (unsigned int i = 0; i < n; i++)
+        printf("%d ", approxGraph.getDegree(i));
+      printf("\n");
       VertexSubset maxVSet = approxGraph.vertexMap(remaining_vertices, SET_MAX_VERTEX_F(inCover, maxV, approxGraph), true); // mark visited
 			//approxGraph.deleteVertex(maxV);
       bool firstBatchIteration = true; 
@@ -428,8 +446,8 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
         }
         // Write phase
         approxGraph.remove_batch(edgesToRemove, min(b_used, b_size));
-        if(percentage < 95.0)
-          progressBar.printIterationBar(vertices_to_delete.get_n());
+        //if(percentage < 95.0)
+        //  progressBar.printIterationBar(vertices_to_delete.get_n());
       } while(vertices_to_delete.non_empty());
 			++minimum;
 		}
