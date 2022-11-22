@@ -108,16 +108,26 @@ struct BF_LEAVES_F {
 };
 
 struct BF_TRIANGLES_F {
+  int *isTri;
   int *inCover;
-  BF_TRIANGLES_F(int *_inCover)
-      : inCover(_inCover) {}
+  BF_TRIANGLES_F(intE *_isTri, int *_inCover)
+      : isTri(_isTri), inCover(_inCover) {}
   // Update ShortestPathLen if found a shorter path
   inline bool update(uintE s, uintE d) {
-    if (inCover[s] && inCover[d]) {
-        printf("DELETE TRIANGLE %d %d\n",s,d);
-        inCover[d] = h(s) < h(d);
-        return inCover[d];
+    if (isTri[s] > isTri[d]) {
+      if (inCover[d] == 0) {
+        printf("DELETE LEAF %d %d\n",s,d);
+        inCover[d] = 1;
+        return 1;
+      }
+    } else if (isTri[s] && isTri[d] && h(s) < h(d)){
+        if (inCover[d] == 0) {
+        printf("DELETE LEAF %d %d\n",s,d);
+        inCover[d] = 1;
+        return 1;
+      }
     }
+    inCover[d] = 0;
     return 0;
   }
   inline bool updateAtomic(uintE s, uintE d) { // atomic Update
@@ -126,6 +136,7 @@ struct BF_TRIANGLES_F {
   }
   inline bool cond([[maybe_unused]] uintE s) { return true; }
 };
+
 
 template <typename T, typename SM> struct SET_LEAVES_2_F {
   T *inCover;
@@ -543,9 +554,9 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
       printf("NumLeaves %u\n",leaves.get_n());
 			*/
       // sets all triangles
-      VertexSubset triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
+      VertexSubset triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(isLeaf, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
       // Prune any extra triangles - i.e. for a single connected component triangle,  only 2 vertices should be included
-      approxGraph.edgeMap(remaining_vertices, BF_TRIANGLES_F(inCover), false, 20);
+      leaves = approxGraph.edgeMap(remaining_vertices, BF_TRIANGLES_F(isLeaf, inCover), true, 20);
 
       while (triangles.non_empty()) { // loop until no leaves remain
         b_used = 0;
@@ -556,7 +567,7 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
         // sets all triangles
         triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
         // Prune any extra triangles - i.e. for a single connected component triangle,  only 2 vertices should be included
-        approxGraph.edgeMap(remaining_vertices, BF_TRIANGLES_F(inCover), false, 20);
+        leaves = approxGraph.edgeMap(remaining_vertices, BF_TRIANGLES_F(isLeaf, inCover), true, 20);
       }
       
       //parallel_for(int64_t i = 0; i < n; i++) { inCover[i] = 0; }
