@@ -116,13 +116,13 @@ struct BF_TRIANGLES_F {
   inline bool update(uintE s, uintE d) {
     if (isTri[s] > isTri[d]) {
       if (inCover[d] == 0) {
-        printf("DELETE LEAF %d %d\n",s,d);
+        //printf("DELETE LEAF %d %d\n",s,d);
         inCover[d] = 1;
         return 1;
       }
     } else if (isTri[s] && isTri[d] && h(s) < h(d)){
         if (inCover[d] == 0) {
-        printf("DELETE LEAF %d %d\n",s,d);
+        //printf("DELETE LEAF %d %d\n",s,d);
         inCover[d] = 1;
         return 1;
       }
@@ -227,7 +227,7 @@ template <typename T, typename SM> struct LEAF_REDUCTION_RULE_F {
         // tiebreak
         if (h(s) < h(d)){
           //printf("SINCE DOUBLE LEAF %u %u (%"PRIu32") (%"PRIu32") only add %u\n", s, d, G.getDegree(s), G.getDegree(d), d);
-          printf("DELETE LEAF %d %d (%d) (%d)\n",d, s, G.getDegree(d), G.getDegree(s));
+          //printf("DELETE LEAF %d %d (%d) (%d)\n",d, s, G.getDegree(d), G.getDegree(s));
 
           solution[s] = 1;
           if (G.has(s,d)){
@@ -245,7 +245,7 @@ template <typename T, typename SM> struct LEAF_REDUCTION_RULE_F {
         }          
       } else {
         solution[d] = 1;
-        printf("DELETE LEAF %d %d (%d) (%d)\n",s,d, G.getDegree(s), G.getDegree(d));
+        //printf("DELETE LEAF %d %d (%d) (%d)\n",s,d, G.getDegree(s), G.getDegree(d));
         if (G.has(s,d)){
           uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
           if (edgeIndex < *maxNumToEdgesRemove) 
