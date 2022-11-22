@@ -87,11 +87,13 @@ struct BF_LEAVES_F {
   inline bool update(uintE s, uintE d) {
     if (isLeaf[s] > isLeaf[d]) {
       if (inCover[d] == 0) {
+        printf("DELETE LEAF %d %d\n",s,d);
         inCover[d] = 1;
         return 1;
       }
     } else if (isLeaf[s] && isLeaf[d] && h(s) < h(d)){
         if (inCover[d] == 0) {
+        printf("DELETE LEAF %d %d\n",s,d);
         inCover[d] = 1;
         return 1;
       }
@@ -487,12 +489,16 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
       leafHasChanged = false;
       triangleHasChanged = false;
 
-      printf("Degrees\n");
-      for (unsigned int i = 0; i < n; i++)
-        printf("%d ", approxGraph.getDegree(i));
-      printf("\n");
+      //printf("Degrees\n");
+
       approxGraph.vertexMap(remaining_vertices, SET_LEAVES_1_F(isLeaf, approxGraph), false); // mark visited
       VertexSubset leaves = approxGraph.edgeMap(remaining_vertices, BF_LEAVES_F(isLeaf, inCover), true, 20);
+      if (leaves.non_empty()){
+        for (unsigned int i = 0; i < n; i++)
+          printf("%d ", approxGraph.getDegree(i));
+        printf("\n");
+      }
+      /*
       printf("IsLeaf\n");
       for (unsigned int i = 0; i < n; i++)
         printf("%d ", isLeaf[i]);
@@ -502,7 +508,8 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
         printf("%d ", inCover[i]);
       printf("\n");
       printf("NumLeaves %u\n",leaves.get_n());
-			while (leaves.non_empty()) { // loop until no leaves remain
+			*/
+      while (leaves.non_empty()) { // loop until no leaves remain
         b_used = 0;
         //__sync_fetch_and_and(&b_used, 0);
         // returns vertices to delete
