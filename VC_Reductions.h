@@ -107,6 +107,29 @@ struct BF_LEAVES_F {
   inline bool cond([[maybe_unused]] uintE s) { return true; }
 };
 
+struct BF_TRIANGLES_F {
+  int *isTri;
+  int *inCover;
+  BF_TRIANGLES_F(intE *_isTri, int *_inCover)
+      : isTri(_isTri), inCover(_inCover) {}
+  // Update ShortestPathLen if found a shorter path
+  inline bool update(uintE s, uintE d) {
+    if (isTri[s] > isTri[d]) {
+      if (inCover[d] == 0) {
+        printf("DELETE TRIANGLE %d %d\n",s,d);
+        inCover[d] = 1;
+        return 1;
+      }
+    }
+    return 0;
+  }
+  inline bool updateAtomic(uintE s, uintE d) { // atomic Update
+    //intE newDist = isLeaf[s] + edgeLen;
+    return (CAS(&inCover[d], 0, 1));
+  }
+  inline bool cond([[maybe_unused]] uintE s) { return true; }
+};
+
 template <typename T, typename SM> struct SET_LEAVES_2_F {
   T *inCover;
   const T *isLeaf;
@@ -498,17 +521,7 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
           printf("%d ", approxGraph.getDegree(i));
         printf("\n");
       }
-      /*
-      printf("IsLeaf\n");
-      for (unsigned int i = 0; i < n; i++)
-        printf("%d ", isLeaf[i]);
-      printf("\n");
-      printf("In cover\n");
-      for (unsigned int i = 0; i < n; i++)
-        printf("%d ", inCover[i]);
-      printf("\n");
-      printf("NumLeaves %u\n",leaves.get_n());
-			*/
+      
       while (leaves.non_empty()) { // loop until no leaves remain
         b_used = 0;
         //__sync_fetch_and_and(&b_used, 0);
@@ -521,9 +534,30 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
         approxGraph.vertexMap(remaining_vertices, SET_LEAVES_1_F(isLeaf, approxGraph), false); // mark visited
         leaves = approxGraph.edgeMap(remaining_vertices, BF_LEAVES_F(isLeaf, inCover), true, 20);
       }
+      /*
+      printf("IsLeaf\n");
+      for (unsigned int i = 0; i < n; i++)
+        printf("%d ", isLeaf[i]);
+      printf("\n");
+      printf("In cover\n");
+      for (unsigned int i = 0; i < n; i++)
+        printf("%d ", inCover[i]);
+      printf("\n");
+      printf("NumLeaves %u\n",leaves.get_n());
+			*/
+      VertexSubset triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
+      while (triangles.non_empty()) { // loop until no leaves remain
+        b_used = 0;
+        // returns vertices to delete
+        vertices_to_delete = approxGraph.edgeMap(remaining_vertices, DELETE_VERTEX_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
+        // Write phase
+        approxGraph.remove_batch(edgesToRemove, min(b_used, b_size));
+        triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
+        leaves = approxGraph.edgeMap(remaining_vertices, BF_TRIANGLES_F(isLeaf, inCover), true, 20);
+      }
       
       //parallel_for(int64_t i = 0; i < n; i++) { inCover[i] = 0; }
-
+      /*
       VertexSubset triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
 			while (triangles.non_empty()) { // loop until no leaves remain
         b_used = 0; 
@@ -538,7 +572,9 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
         approxGraph.remove_batch(edgesToRemove, min(b_used, b_size));
         triangles = approxGraph.edgeMap(remaining_vertices, SET_TRIANGLES_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
       }
-		} while (leafHasChanged || triangleHasChanged);
+      */
+		//} while (leafHasChanged || triangleHasChanged);
+		} while (leafHasChanged);
 
 		int32_t maxV;
 		int32_t maxD = 0;
