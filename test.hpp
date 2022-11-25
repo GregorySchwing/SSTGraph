@@ -716,7 +716,7 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
 #endif
 
 #if 1 
-  SparseMatrixV<true, bool> g3(g);
+  SparseMatrixV<true, bool> g3(g2);
   printf("start VC_BnB\n");
   start = get_usecs();
   int32_t *parallel_vc_BnB_result = VC_BnB_with_edge_map(g2);
