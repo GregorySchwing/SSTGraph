@@ -163,7 +163,6 @@ template <typename T, typename SM> struct SET_LEAVES_2_F {
 
     if (isLeaf[s] > isLeaf[d]) {
       printf("isLeaf[%d] %d isLeaf[%d] %d\n",s,isLeaf[s],d,isLeaf[d]);
-      exit(1);
       inCover[d] |= 1;
       return false;
     }
@@ -180,7 +179,6 @@ template <typename T, typename SM> struct SET_LEAVES_2_F {
 
   */
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-  exit(1);
     if (G.getDegree(s) == 1){
       if (G.getDegree(s) == G.getDegree(d)){
         __sync_fetch_and_and(&inCover[d], h(s) < h(d));
@@ -265,7 +263,6 @@ template <typename T, typename SM> struct LEAF_REDUCTION_RULE_F {
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     printf("USED ATOMIC\n");
-    exit(1);
     bool deletedEdge = false;
     if (inCover[s]){
       solution[d] = 1;
@@ -476,14 +473,14 @@ template <typename T, typename SM> struct TRIANGLE_REDUCTION_RULE_F {
 
 class VC_Reductions {
   public:
-    template <typename SM> int32_t RemoveMaxApproximateMVC(SM &G);
+    template <typename SM> int32_t* RemoveMaxApproximateMVC(SM &G);
 };
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
-template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approxGraph){
-  //int64_t n = G.get_rows();
+template <typename SM> int32_t* VC_Reductions::RemoveMaxApproximateMVC(SM &G){
 
-  int64_t n = approxGraph.get_rows();
+  SparseMatrixV<true, bool> approxGraph(G);
+  int64_t n = approxGraph.get_rows(); 
   if (n == 0) {
     return 0;
   }
@@ -637,14 +634,8 @@ template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &approx
 	}
   // Destructor is automatically called
 	//approxGraph.del();
-  int32_t vc_count = 0;
-  for (int j = 0; j < approxGraph.get_rows(); j++) {
-    vc_count += solution[j];
-  }
-  printf("\nVC_Red size : %u\n", vc_count);
-  exit(1);
+
   free(edgesToRemove);
   free(inCover);
-  free(solution);
-	return minimum;
+	return solution;
 }

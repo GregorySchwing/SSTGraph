@@ -716,22 +716,22 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
 #endif
 
 #if 1 
+  SparseMatrixV<true, bool> g3(g);
   printf("start VC_BnB\n");
   start = get_usecs();
   int32_t *parallel_vc_BnB_result = VC_BnB_with_edge_map(g2);
   end = get_usecs();
-  printf("VC_BnB: ");
-  //for (uint32_t j = 0; j < num_nodes; j++) {
-  //  if (parallel_vc_result[j])
-  //    printf("%lu ", j);
-  //}
-  printf("\n");
-  int32_t vc_BnB_count = 0;
-  for (int j = 0; j < g.get_rows(); j++) {
-    vc_BnB_count += parallel_vc_result[j];
-  }
-  printf("VC_BnB size : %u\n", vc_BnB_count);
+
   printf("time to VC_BnB %lu micros\n",
+         end - start);
+  bool validSolution_BnB = Check_VC_with_edge_map(parallel_vc_BnB_result, g3);
+  printf("VC_BnB is valid solution : %s\n", validSolution_BnB ? "true" : "false");
+  int32_t vc_count_BnB = 0;
+  for (int j = 0; j < g.get_rows(); j++) {
+    vc_count_BnB += parallel_vc_BnB_result[j];
+  }
+  printf("VC_BnB size : %u\n", vc_count_BnB);
+  printf("time to vc %lu micros\n",
          end - start);
 #endif
 

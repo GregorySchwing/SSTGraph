@@ -190,8 +190,9 @@ template <typename T, typename SM> struct VC_BnB_ROUND_2_F {
 template <typename SM> int32_t *VC_BnB_with_edge_map(SM &G) {
 
   VC_Reductions vcr;
-  vcr.RemoveMaxApproximateMVC(G);
-
+  int32_t * approxSolution = vcr.RemoveMaxApproximateMVC(G);
+  return approxSolution;
+  
   // Prevent terminal input messing up progress bar display
   printf("\nDisabling keyboard input\n");
   struct termios oldT, newT;
