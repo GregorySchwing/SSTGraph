@@ -639,9 +639,6 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
   printf("creation took %lums\n", (end - start) / 1000);
   start = get_usecs();
 
-  SparseMatrixV<true, bool> g2(num_nodes, num_nodes);
-
-
   uint64_t bfs_milles = 0;
   uint64_t pr_milles = 0;
   uint64_t bc_milles = 0;
@@ -685,15 +682,6 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
 
   end = get_usecs();
 
-  uint64_t j = 0;
-  if (num_edges > local_batch_size) {
-    for (; j < num_edges - local_batch_size; j += local_batch_size) {
-      g2.insert_batch(edges + j, local_batch_size);
-      // fprintf(stderr, "num_edges added = %lu\n", j + local_batch_size);
-    }
-  }
-  g2.insert_batch(edges + j, num_edges % local_batch_size);
-
   // g.insert_batch(edges, num_edges);
   free(edges);
   printf("inserting the edges took %lums\n", (end - start) / 1000);
@@ -703,6 +691,7 @@ bool real_graph(const std::string &filename, [[maybe_unused]] bool symetric,
          size, g.M(), num_nodes);
   g.print_statistics();
 
+  SparseMatrixV<true, bool> g2(g);
   g2.print_statistics();
 #if 1 
   printf("start vc\n");
