@@ -403,6 +403,55 @@ template <typename T, typename SM> struct SET_TRIANGLES_F {
 };
 
 
+template <typename T, typename SM> struct SET_ANTI_EDGES_F {
+  T *numberAntiEdges;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  SET_ANTI_EDGES_F(T* _numberAntiEdges, SM &_G) : 
+  numberAntiEdges(_numberAntiEdges),
+  G(_G)  {}
+  // Assumes undirected graph
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    // Assuming I am not a neighbor to myself,
+    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
+    //  Self-edges aren't considered in common neighbors, so subtract 1.
+    numberAntiEdges[d] += (G.getDegree(d) - G.common_neighbors(s,d) - 1);
+    printf("s %u d %u nAE %u degree(%u) : %u common neighbors (%u, %u) : %u\n", s , d, G.getDegree(d) - G.common_neighbors(s,d) - 1,
+    d, G.getDegree(d), s, d, G.common_neighbors(s,d));
+    return true;
+  }
+  // Assumes undirected graph
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    // Assuming I am not a neighbor to myself,
+    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
+    uint32_t edgeIndex = __sync_fetch_and_add(&numberAntiEdges[d], (G.getDegree(d) - G.common_neighbors(s,d) - 1));
+    return true;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
+
+
+template <typename T, typename SM> 
+struct SET_STRUCTION_F {
+  T *numberAntiEdges;
+  T *performStruction;
+  const SM &G;
+
+  explicit SET_STRUCTION_F(T *_numberAntiEdges, T *_performStruction, const SM &_G) : numberAntiEdges(_numberAntiEdges), performStruction(_performStruction), G(_G) {}
+  inline bool operator()(uintE i) {
+    performStruction[i] = numberAntiEdges[i] < G.getDegree(i);
+    if (numberAntiEdges[i] < G.getDegree(i))
+      printf("ELIGIBLE STRUCTION %d (%d < %d)\n",i, numberAntiEdges[i], G.getDegree(i));
+    return performStruction[i];
+  }
+};
+
+
 template <typename T, typename SM> struct TRIANGLE_REDUCTION_RULE_F {
   T *isTriangle;
   T *solution;
@@ -481,12 +530,23 @@ class VC_Reductions {
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
 template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
+  SparseMatrixV<true, bool> approxGraph(G);
+  int64_t n = approxGraph.get_rows(); 
+  int32_t *numberAntiEdges = (int32_t *)malloc(n * sizeof(int32_t));
+  int32_t *performStruction = (int32_t *)malloc(n * sizeof(int32_t));
 
-  int32_t *struction = (int32_t *)malloc(n * sizeof(int32_t));
-  parallel_for(int64_t i = 0; i < n; i++) { struction[i] = 0; }
-  
+  VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
+  parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { performStruction[i] = false; }
 
+  VertexSubset struction = approxGraph.edgeMap(remaining_vertices, SET_ANTI_EDGES_F(numberAntiEdges, approxGraph), true, 20);
+  parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] /= 2; }
+  VertexSubset structionSet = approxGraph.vertexMap(remaining_vertices, SET_STRUCTION_F(numberAntiEdges, performStruction, approxGraph), true); // mark visited
 
+  for (uint32_t j = 0; j < n; j++) {
+    printf("%lu ", numberAntiEdges[j]);
+  }
+  exit(1);
 }
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
