@@ -474,7 +474,20 @@ template <typename T, typename SM> struct TRIANGLE_REDUCTION_RULE_F {
 class VC_Reductions {
   public:
     template <typename SM> int32_t* RemoveMaxApproximateMVC(SM &G);
+    template <typename SM> int32_t* Struction(SM &G);
+
 };
+
+
+//template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
+template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
+
+  int32_t *struction = (int32_t *)malloc(n * sizeof(int32_t));
+  parallel_for(int64_t i = 0; i < n; i++) { struction[i] = 0; }
+  
+
+
+}
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
 template <typename SM> int32_t* VC_Reductions::RemoveMaxApproximateMVC(SM &G){
