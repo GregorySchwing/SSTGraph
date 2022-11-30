@@ -446,11 +446,43 @@ struct SET_STRUCTION_F {
   inline bool operator()(uintE i) {
     performStruction[i] = numberAntiEdges[i] < G.getDegree(i);
     if (numberAntiEdges[i] < G.getDegree(i))
-      printf("ELIGIBLE STRUCTION %d (%d < %d)\n",i, numberAntiEdges[i], G.getDegree(i));
+      performStruction[i] = G.getDegree(i) - numberAntiEdges[i];
     return performStruction[i];
   }
 };
 
+template <typename T, typename SM> struct SET_STRUCTION_DEGREES_F {
+  T *structionDegrees;
+  T *performStruction;
+   // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  SET_STRUCTION_DEGREES_F(T* _structionDegrees, T* _performStruction, SM &_G) : 
+  structionDegrees(_structionDegrees),
+  performStruction(_performStruction),
+
+  G(_G)  {}
+  // Assumes undirected graph
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    // Assuming I am not a neighbor to myself,
+    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
+    //  Self-edges aren't considered in common neighbors, so subtract 1.
+    structionDegrees[d] += performStruction[s];
+    return true;
+  }
+  // Assumes undirected graph
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    // Assuming I am not a neighbor to myself,
+    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
+    uint32_t edgeIndex = __sync_fetch_and_add(&structionDegrees[d], performStruction[s]);
+    return true;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
 
 template <typename T, typename SM> struct TRIANGLE_REDUCTION_RULE_F {
   T *isTriangle;
@@ -534,14 +566,17 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   int64_t n = approxGraph.get_rows(); 
   int32_t *numberAntiEdges = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *performStruction = (int32_t *)malloc(n * sizeof(int32_t));
+  int32_t *degreesStruction = (int32_t *)malloc(n * sizeof(int32_t));
 
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] = 0; }
   parallel_for(int64_t i = 0; i < n; i++) { performStruction[i] = false; }
+  parallel_for(int64_t i = 0; i < n; i++) { degreesStruction[i] = 0; }
 
   VertexSubset struction = approxGraph.edgeMap(remaining_vertices, SET_ANTI_EDGES_F(numberAntiEdges, approxGraph), true, 20);
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] /= 2; }
   VertexSubset structionSet = approxGraph.vertexMap(remaining_vertices, SET_STRUCTION_F(numberAntiEdges, performStruction, approxGraph), true); // mark visited
+  VertexSubset structionDegrees = approxGraph.edgeMap(remaining_vertices, SET_STRUCTION_DEGREES_F(degreesStruction, performStruction, approxGraph), true, 20);
 
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", numberAntiEdges[j]);
