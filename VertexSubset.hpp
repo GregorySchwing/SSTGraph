@@ -78,6 +78,20 @@ public:
       printf("}\n");
     }
   }
+  /* Added by GJS */
+  uint32_t pop() const {
+    if (is_sparse) {
+      return queue->pop();
+    } else {
+      for (uint32_t i = max_el-1; 0 <= i; i--) {
+        if (ba->get(i)) {
+          ba->flip(i);
+          return i;
+        }
+      }
+    }
+  }
+
   void insert(uint64_t i) const {
     if (is_sparse) {
       queue_array[4 * getWorkerNum()].push_back(i);

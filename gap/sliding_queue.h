@@ -50,6 +50,8 @@ public:
   ~SlidingQueue() { free(shared); }
 
   void push_back(T to_add) { shared[shared_in++] = to_add; }
+  /* Added by GJS */
+  T pop() { return shared[shared_in--]; }
 
   bool empty() const { return shared_out_start == shared_out_end; }
 

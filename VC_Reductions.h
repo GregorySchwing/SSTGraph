@@ -413,12 +413,12 @@ template <typename T, typename SM> struct SET_ANTI_EDGES_F {
   G(_G)  {}
   // Assumes undirected graph
   inline bool update(uint32_t s, uint32_t d) { // Update
-    // Assuming I am not a neighbor to myself,
-    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
-    //  Self-edges aren't considered in common neighbors, so subtract 1.
+    //  Self-edges aren't considered in common neighbors, 
+    //  therefore, the source isn't included in the common neighbors
+    //  of the destination, so subtract 1.
     numberAntiEdges[d] += (G.getDegree(d) - G.common_neighbors(s,d) - 1);
-    printf("s %u d %u nAE %u degree(%u) : %u common neighbors (%u, %u) : %u\n", s , d, G.getDegree(d) - G.common_neighbors(s,d) - 1,
-    d, G.getDegree(d), s, d, G.common_neighbors(s,d));
+    //printf("s %u d %u nAE %u degree(%u) : %u common neighbors (%u, %u) : %u\n", s , d, G.getDegree(d) - G.common_neighbors(s,d) - 1,
+    //d, G.getDegree(d), s, d, G.common_neighbors(s,d));
     return true;
   }
   // Assumes undirected graph
@@ -444,38 +444,140 @@ struct SET_STRUCTION_F {
 
   explicit SET_STRUCTION_F(T *_numberAntiEdges, T *_performStruction, const SM &_G) : numberAntiEdges(_numberAntiEdges), performStruction(_performStruction), G(_G) {}
   inline bool operator()(uintE i) {
-    performStruction[i] = numberAntiEdges[i] < G.getDegree(i);
-    if (numberAntiEdges[i] < G.getDegree(i))
-      performStruction[i] = G.getDegree(i) - numberAntiEdges[i];
-    return performStruction[i];
+    return performStruction[i] = (G.getDegree(i) > numberAntiEdges[i]) && numberAntiEdges[i];
   }
 };
 
-template <typename T, typename SM> struct SET_STRUCTION_DEGREES_F {
-  T *structionDegrees;
+template <typename T, typename SM> struct SOLVE_MIS_F {
+  T *performStruction;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  const SM &G;
+  SOLVE_MIS_F(T *_performStruction, const SM &_G) : performStruction(_performStruction), G(_G)  {}
+
+  /*
+    In dense mode, EdgeMap loops over all vertices and
+    looks at incoming edges to see if the source is part of the
+    vertex set. This does not require locking because each vertex
+    only updates itself and is preferred when the vertex set is large.
+
+    I am the destination.  I only update inCover[d].
+    Degrees are const in this class.
+
+  */
+
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    if (performStruction[s] > performStruction[d]) {
+      performStruction[d] = 0;
+      return false;
+    } else if (performStruction[s] == performStruction[d]){
+      performStruction[d] &= h(s) < h(d);
+      return false;
+    } else {
+      // Start at 1, no need to set
+      //inCover[d] &= 1;
+      return false;
+    }
+  }
+  /*
+    In sparse mode, EdgeMap
+    iterates over the outgoing edges of each vertex in the subset
+    and updates the destination vertex for each edge. Because it is
+    run in parallel, synchronization must be used when accessing
+    the destination vertex data.
+
+    I am the source.  I update inCover[d] using synchronization.
+    Degrees are const in this class.
+
+  */
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    if (performStruction[s] > performStruction[d]) {
+      //inCover[d] = 0;
+      __sync_fetch_and_and(&performStruction[d], 0);
+      return false;
+    } else if (performStruction[s] == performStruction[d]){
+      __sync_fetch_and_and(&performStruction[d], h(s) < h(d));
+      return false;
+    } else {
+      // Start at 1, no need to set
+      //inCover[d] &= 1;
+      return false;
+    }
+  }
+  // cond function checks if vertex in remaining vertices set has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+    //return G.getDegree(d) > 0;
+  }
+};
+
+template <typename T, typename SM> struct SET_LARGEST_DEGREE_STRUCT_F {
+  T *maxVertex;
+  T *maxDegree;
   T *performStruction;
    // vertex* V;
   // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
   SM &G;
-  SET_STRUCTION_DEGREES_F(T* _structionDegrees, T* _performStruction, SM &_G) : 
-  structionDegrees(_structionDegrees),
+  SET_LARGEST_DEGREE_STRUCT_F(T* _maxVertex, T* _maxDegree, T* _performStruction, SM &_G) : 
+  maxVertex(_maxVertex),
+  maxDegree(_maxDegree),
   performStruction(_performStruction),
 
   G(_G)  {}
-  // Assumes undirected graph
+  // Only set this for non-struction v_0, looking for examples 
+  // where non-struction v_0 is neighbors with two struction candidates.
   inline bool update(uint32_t s, uint32_t d) { // Update
-    // Assuming I am not a neighbor to myself,
-    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
-    //  Self-edges aren't considered in common neighbors, so subtract 1.
-    structionDegrees[d] += performStruction[s];
+    if (!performStruction[d]){
+      if (performStruction[s] > maxDegree[d]){
+        maxDegree[d] = performStruction[s];
+      } else if (performStruction[s] == maxDegree[d] && h(maxVertex[d]) < h(s)){
+        maxVertex[d] = s;
+      }
+    }
     return true;
   }
   // Assumes undirected graph
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    // Assuming I am not a neighbor to myself,
-    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
-    uint32_t edgeIndex = __sync_fetch_and_add(&structionDegrees[d], performStruction[s]);
+    if (!performStruction[d]){
+      if (performStruction[s] > maxDegree[d]){
+        maxDegree[d] = performStruction[s];
+      } else if (performStruction[s] == maxDegree[d] && h(maxVertex[d]) < h(s)){
+        maxVertex[d] = s;
+      }
+    }
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
     return true;
+  }
+};
+
+
+template <typename T, typename SM> struct RESOLVE_CONFLICTS_STRUCT_F {
+  T *maxVertex;
+  T *performStruction;
+   // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  RESOLVE_CONFLICTS_STRUCT_F(T* _maxVertex, T* _performStruction, SM &_G) : 
+  maxVertex(_maxVertex),
+  performStruction(_performStruction),
+
+  G(_G)  {}
+  // Only set this for non-struction v_0, looking for examples 
+  // where non-struction v_0 is neighbors with two struction candidates.
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    if (performStruction[d] && maxVertex[s] != d){
+      performStruction[d] = 0;
+    }
+    return true;
+  }
+  // Assumes undirected graph
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    if (performStruction[d] && maxVertex[s] != d){
+      performStruction[d] = 0;
+    }
   }
   
   // cond function checks if vertex has non-zero degree
@@ -566,21 +668,38 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   int64_t n = approxGraph.get_rows(); 
   int32_t *numberAntiEdges = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *performStruction = (int32_t *)malloc(n * sizeof(int32_t));
-  int32_t *degreesStruction = (int32_t *)malloc(n * sizeof(int32_t));
+  int32_t *maxVertex = (int32_t *)malloc(n * sizeof(int32_t));
 
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] = 0; }
-  parallel_for(int64_t i = 0; i < n; i++) { performStruction[i] = false; }
-  parallel_for(int64_t i = 0; i < n; i++) { degreesStruction[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { performStruction[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { maxVertex[i] = 0; }
 
   VertexSubset struction = approxGraph.edgeMap(remaining_vertices, SET_ANTI_EDGES_F(numberAntiEdges, approxGraph), true, 20);
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] /= 2; }
   VertexSubset structionSet = approxGraph.vertexMap(remaining_vertices, SET_STRUCTION_F(numberAntiEdges, performStruction, approxGraph), true); // mark visited
-  VertexSubset structionDegrees = approxGraph.edgeMap(remaining_vertices, SET_STRUCTION_DEGREES_F(degreesStruction, performStruction, approxGraph), true, 20);
-
+  printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
-    printf("%lu ", numberAntiEdges[j]);
+    printf("%lu ", j);
   }
+  printf("\nStruction flags\n");
+  for (uint32_t j = 0; j < n; j++) {
+    printf("%lu ", performStruction[j]);
+  }
+  printf("\n");
+
+  while (structionSet.non_empty()){
+    uint32_t structCandidate = structionSet.pop();
+    printf("Perform struct operation on %lu\n", structCandidate);
+  }
+  /*
+  VertexSubset structionMIS = approxGraph.edgeMap(remaining_vertices, SOLVE_MIS_F(performStruction, approxGraph), true, 20);
+  VertexSubset maxDegree = approxGraph.edgeMap(remaining_vertices, SET_LARGEST_DEGREE_STRUCT_F(maxVertex, numberAntiEdges, performStruction, approxGraph), true, 20);
+  VertexSubset fin = approxGraph.edgeMap(remaining_vertices, RESOLVE_CONFLICTS_STRUCT_F(maxVertex, performStruction, approxGraph), true, 20);
+  */
+  free(numberAntiEdges);
+  free(performStruction);
+  free(maxVertex);
   exit(1);
 }
 
