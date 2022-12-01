@@ -33,6 +33,7 @@ public:
   uint64_t sum_keys() { return ts.sum_keys(d); }
   value_type sum_values() { return ts.sum_values(d); }
 
+  std::vector<el_t> get_neighbors() { return ts.get_neighbors(d); }
   void print() { ts.print(d); }
   void print_pmas() { ts.print_pmas(d); }
   class iterator {

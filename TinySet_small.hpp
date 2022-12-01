@@ -453,6 +453,24 @@ void TinySetV_small<value_type>::print(const extra_data &d) const {
   printf("\n");
 }
 
+
+template <typename value_type>
+std::vector<el_t> TinySetV_small<value_type>::get_neighbors(const extra_data &d) const {
+  std::vector<el_t> neighbors;
+  for (auto it = begin(d); it != end(d); ++it) {
+    if constexpr (binary) {
+      neighbors.push_back((*it).first);
+      //printf("%u, ", (*it).first);
+    } else {
+      neighbors.push_back((*it).first);
+      neighbors.push_back((*it).second);
+      //std::cout << "( " << (*it).first << ", " << +(*it).second << "), ";
+    }
+  }
+  return neighbors;
+}
+
+
 template <typename value_type>
 template <int bytes>
 void TinySetV_small<value_type>::print_pmas_internal(

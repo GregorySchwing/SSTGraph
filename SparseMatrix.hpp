@@ -366,6 +366,24 @@ public:
   [[nodiscard]] SparseMatrixV<true, value_type> convert_to_csr();
   [[nodiscard]] SparseMatrixV<false, value_type> convert_to_csc();
 
+  std::vector<el_t> get_neighbors(uint32_t line) const {
+    return lines[line].get_neighbors(ts_data);
+    //lines[line].print(ts_data);
+  }
+
+  void print_neighbors(uint32_t line) const {
+    if constexpr (is_csr()) {
+      printf("matrix stored in csr\n");
+    }
+    if constexpr (is_csc()) {
+      printf("matrix stored in csc\n");
+    }
+    printf("there are %lu elements\n", lines[line].get_n());
+    printf("line %u\n", line);
+    lines[line].print(ts_data);
+    printf("sum = %lu\n", lines[line].sum_keys(ts_data));
+  }
+
   void print_arrays() const {
     if constexpr (is_csr()) {
       printf("matrix stored in csr\n");

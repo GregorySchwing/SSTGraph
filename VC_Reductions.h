@@ -448,6 +448,41 @@ struct SET_STRUCTION_F {
   }
 };
 
+
+template <typename T, typename SM> struct STRUCTION_OP_F {
+  T *numberAntiEdges;
+  std::tuple<el_t, el_t> *edgesToRemove;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  STRUCTION_OP_F(T* _numberAntiEdges, SM &_G) : 
+  numberAntiEdges(_numberAntiEdges),
+  G(_G)  {}
+  // Assumes undirected graph
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    //  Self-edges aren't considered in common neighbors, 
+    //  therefore, the source isn't included in the common neighbors
+    //  of the destination, so subtract 1.
+    numberAntiEdges[d] += (G.getDegree(d) - G.common_neighbors(s,d) - 1);
+    //printf("s %u d %u nAE %u degree(%u) : %u common neighbors (%u, %u) : %u\n", s , d, G.getDegree(d) - G.common_neighbors(s,d) - 1,
+    //d, G.getDegree(d), s, d, G.common_neighbors(s,d));
+    return true;
+  }
+  // Assumes undirected graph
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    // Assuming I am not a neighbor to myself,
+    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
+    uint32_t edgeIndex = __sync_fetch_and_add(&numberAntiEdges[d], (G.getDegree(d) - G.common_neighbors(s,d) - 1));
+    return true;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
+
+
 template <typename T, typename SM> struct SOLVE_MIS_F {
   T *performStruction;
   // vertex* V;
@@ -670,6 +705,12 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   int32_t *performStruction = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *maxVertex = (int32_t *)malloc(n * sizeof(int32_t));
 
+  int32_t b_size = 10000; 
+  int32_t b_used = 0; 
+  std::tuple<el_t, el_t> *edgesToRemove = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
+  std::tuple<el_t, el_t> *edgesToInsert = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
+
+
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] = 0; }
   parallel_for(int64_t i = 0; i < n; i++) { performStruction[i] = 0; }
@@ -691,6 +732,13 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   while (structionSet.non_empty()){
     uint32_t structCandidate = structionSet.pop();
     printf("Perform struct operation on %lu\n", structCandidate);
+    G.print_neighbors(structCandidate);
+    std::vector<el_t> neighs = G.get_neighbors(structCandidate);
+    printf("Neighbors of %lu\n", structCandidate);
+    for (int i = 0; i < neighs.size(); ++i)
+      printf("%u \n", neighs[i]);
+    printf("\n");
+
   }
   /*
   VertexSubset structionMIS = approxGraph.edgeMap(remaining_vertices, SOLVE_MIS_F(performStruction, approxGraph), true, 20);
@@ -700,6 +748,8 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   free(numberAntiEdges);
   free(performStruction);
   free(maxVertex);
+  free(edgesToRemove);
+  free(edgesToInsert);
   exit(1);
 }
 

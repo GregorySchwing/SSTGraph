@@ -201,6 +201,9 @@ public:
                                   uint32_t early_end_B) const;
   void print(const extra_data &d) const;
 
+  //template <typename value_type>
+  std::vector<el_t> get_neighbors(const extra_data &d) const;
+  
   template <class F>
   void map(F &f, const extra_data &d, bool parallel = false) const;
 
