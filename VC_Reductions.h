@@ -1,7 +1,8 @@
 #pragma once
 #include "SparseMatrix.hpp"
 #include "ProgressBar.h"
-
+#include <map>
+#include <iterator>
 // This code is part of the project "Ligra: A Lightweight Graph Processing
 // Framework for Shared Memory", presented at Principles and Practice of
 // Parallel Programming, 2013.
@@ -170,7 +171,7 @@ template <typename T, typename SM> struct SET_LEAVES_2_F {
   /*
     In sparse mode, EdgeMap
     iterates over the outgoing edges of each vertex in the subset
-    and updates the destination vertex for each edge. Because it is
+    and updates the destination vertex for each edge. Because it_i is
     run in parallel, synchronization must be used when accessing
     the destination vertex data.
 
@@ -517,7 +518,7 @@ template <typename T, typename SM> struct SOLVE_MIS_F {
   /*
     In sparse mode, EdgeMap
     iterates over the outgoing edges of each vertex in the subset
-    and updates the destination vertex for each edge. Because it is
+    and updates the destination vertex for each edge. Because it_i is
     run in parallel, synchronization must be used when accessing
     the destination vertex data.
 
@@ -709,7 +710,8 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   int32_t b_used = 0; 
   std::tuple<el_t, el_t> *edgesToRemove = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
   std::tuple<el_t, el_t> *edgesToInsert = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
-
+  int32_t removeCounter;
+  int32_t insertCounter;
 
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] = 0; }
@@ -738,7 +740,66 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
     for (int i = 0; i < neighs.size(); ++i)
       printf("%u \n", neighs[i]);
     printf("\n");
+    int usedVertexCounter = 0;
+    std::map<std::tuple<el_t,el_t>,el_t> antiEdgeToNodeMap;
+    for (int i = 0; i < neighs.size(); ++i)
+      for (int j = i+1; j < neighs.size(); ++j){
+        if (!G.has(neighs[i], neighs[j]))
+          antiEdgeToNodeMap[std::tuple<el_t, el_t>{neighs[i], neighs[j]}] = neighs[usedVertexCounter++];
+      }
+    for (auto& t : antiEdgeToNodeMap)
+        std::cout << std::get<0>(t.first) << " " 
+                  << std::get<1>(t.first) << " " 
+                  << t.second << "\n";
 
+
+    std::map<std::tuple<el_t,el_t>,el_t>::iterator it_i = antiEdgeToNodeMap.begin();
+    std::map<std::tuple<el_t,el_t>,el_t>::iterator it_j;
+
+    insertCounter = 0;
+
+    while (it_i != antiEdgeToNodeMap.end())
+    {
+      it_j = std::next(it_i, 1);
+      while (it_j != antiEdgeToNodeMap.end())
+      {
+        std::cout << std::get<0>(it_i->first) << " " 
+          << std::get<1>(it_i->first) << " " 
+          << it_i->second << "\n"; 
+        std::cout << std::get<0>(it_j->first) << " " 
+          << std::get<1>(it_j->first) << " " 
+          << it_j->second << "\n"; 
+
+        // Condition 2 - 
+        // add an edge (vir; vjs) if i = j and
+        // (vr; vs) is an edge in G;
+        if ((std::get<0>(it_i->first) == std::get<0>(it_j->first))
+              && G.has(std::get<1>(it_i->first), std::get<1>(it_j->first))){
+          edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_i->second, it_j->second};
+          edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_j->second, it_i->second};
+          printf("Adding edge (%lu, %lu)-(%lu, %lu) in new neighborhood\n",std::get<0>(it_i->first), std::get<1>(it_i->first),
+          std::get<0>(it_j->first), std::get<1>(it_j->first));
+        }
+
+        // Condition 3 - 
+        // if i != j, add an edge (vir; vjs)
+        if (std::get<0>(it_i->first) != std::get<0>(it_j->first)){
+          edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_i->second, it_j->second};
+          edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_j->second, it_i->second};
+          printf("Adding edge (%lu, %lu)-(%lu, %lu) in new neighborhood\n",std::get<0>(it_i->first), std::get<1>(it_i->first),
+          std::get<0>(it_j->first), std::get<1>(it_j->first));
+        }
+
+        
+        // Condition 4 - 
+        // for every u not in {v0; ... ; vp}, 
+        // add the edge (vij ; u) if (vi; u)
+        // or (vj ; u) is an edge in G.
+
+        ++it_j;
+      }
+      ++it_i;
+    }
   }
   /*
   VertexSubset structionMIS = approxGraph.edgeMap(remaining_vertices, SOLVE_MIS_F(performStruction, approxGraph), true, 20);
