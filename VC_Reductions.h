@@ -732,20 +732,20 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   printf("\n");
 
   while (structionSet.non_empty()){
-    uint32_t structCandidate = structionSet.pop();
-    printf("Perform struct operation on %lu\n", structCandidate);
-    G.print_neighbors(structCandidate);
-    std::vector<el_t> neighs = G.get_neighbors(structCandidate);
-    printf("Neighbors of %lu\n", structCandidate);
-    for (int i = 0; i < neighs.size(); ++i)
-      printf("%u \n", neighs[i]);
+    uint32_t v0 = structionSet.pop();
+    printf("Perform struct operation on %lu\n", v0);
+    G.print_neighbors(v0);
+    std::vector<el_t> v0_neighs = G.get_neighbors(v0);
+    printf("Neighbors of %lu\n", v0);
+    for (int i = 0; i < v0_neighs.size(); ++i)
+      printf("%u \n", v0_neighs[i]);
     printf("\n");
     int usedVertexCounter = 0;
     std::map<std::tuple<el_t,el_t>,el_t> antiEdgeToNodeMap;
-    for (int i = 0; i < neighs.size(); ++i)
-      for (int j = i+1; j < neighs.size(); ++j){
-        if (!G.has(neighs[i], neighs[j]))
-          antiEdgeToNodeMap[std::tuple<el_t, el_t>{neighs[i], neighs[j]}] = neighs[usedVertexCounter++];
+    for (int i = 0; i < v0_neighs.size(); ++i)
+      for (int j = i+1; j < v0_neighs.size(); ++j){
+        if (!G.has(v0_neighs[i], v0_neighs[j]))
+          antiEdgeToNodeMap[std::tuple<el_t, el_t>{v0_neighs[i], v0_neighs[j]}] = v0_neighs[usedVertexCounter++];
       }
     for (auto& t : antiEdgeToNodeMap)
         std::cout << std::get<0>(t.first) << " " 
@@ -760,6 +760,37 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
 
     while (it_i != antiEdgeToNodeMap.end())
     {
+      // Condition 1 - 
+      // remove the vertices {v0; v1; ... ; vp} from G and
+      // introduce a new node vij for every anti-edge {vi; vj} in G
+      // where 0 < i < j <= p;
+      std::vector<el_t> externalNeighs = G.get_neighbors(std::get<0>(it_i->first));
+
+
+      std::cout << "External neighbors of " << std::get<0>(it_i->first) << " before removal" << std::endl;
+      for (auto element : externalNeighs) {
+        std::cout << element << " ";
+      }
+      std::cout << std::endl;
+
+      externalNeighs.erase( remove_if( begin(externalNeighs),end(externalNeighs),
+          [&](auto x){return find(begin(v0_neighs),end(v0_neighs),x)!=end(v0_neighs);}), end(externalNeighs) );
+
+      std::cout << "External neighbors of " << std::get<0>(it_i->first) << " after N(v0) removal" << std::endl;
+      for (auto element : externalNeighs) {
+        std::cout << element << " ";
+      }
+      std::cout << std::endl;
+
+      externalNeighs.erase(std::remove(externalNeighs.begin(), externalNeighs.end(), v0), externalNeighs.end());
+
+      std::cout << "External neighbors of " << std::get<0>(it_i->first) << " after v0 removal" << std::endl;
+      for (auto element : externalNeighs) {
+        std::cout << element << " ";
+      }
+      std::cout << std::endl;
+
+
       it_j = std::next(it_i, 1);
       while (it_j != antiEdgeToNodeMap.end())
       {
