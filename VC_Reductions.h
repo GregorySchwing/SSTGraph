@@ -764,31 +764,6 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       // remove the vertices {v0; v1; ... ; vp} from G and
       // introduce a new node vij for every anti-edge {vi; vj} in G
       // where 0 < i < j <= p;
-      std::vector<el_t> externalNeighs = G.get_neighbors(std::get<0>(it_i->first));
-
-
-      std::cout << "External neighbors of " << std::get<0>(it_i->first) << " before removal" << std::endl;
-      for (auto element : externalNeighs) {
-        std::cout << element << " ";
-      }
-      std::cout << std::endl;
-
-      externalNeighs.erase( remove_if( begin(externalNeighs),end(externalNeighs),
-          [&](auto x){return find(begin(v0_neighs),end(v0_neighs),x)!=end(v0_neighs);}), end(externalNeighs) );
-
-      std::cout << "External neighbors of " << std::get<0>(it_i->first) << " after N(v0) removal" << std::endl;
-      for (auto element : externalNeighs) {
-        std::cout << element << " ";
-      }
-      std::cout << std::endl;
-
-      externalNeighs.erase(std::remove(externalNeighs.begin(), externalNeighs.end(), v0), externalNeighs.end());
-
-      std::cout << "External neighbors of " << std::get<0>(it_i->first) << " after v0 removal" << std::endl;
-      for (auto element : externalNeighs) {
-        std::cout << element << " ";
-      }
-      std::cout << std::endl;
 
 
       it_j = std::next(it_i, 1);
@@ -826,6 +801,30 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
         // for every u not in {v0; ... ; vp}, 
         // add the edge (vij ; u) if (vi; u)
         // or (vj ; u) is an edge in G.
+        std::vector<el_t> externalNeighs = G.get_neighbors(std::get<0>(it_i->first));
+
+        std::cout << "External neighbors of " << std::get<0>(it_i->first) << " before removal" << std::endl;
+        for (auto element : externalNeighs) {
+          std::cout << element << " ";
+        }
+        std::cout << std::endl;
+
+        externalNeighs.erase( remove_if( begin(externalNeighs),end(externalNeighs),
+            [&](auto x){return find(begin(v0_neighs),end(v0_neighs),x)!=end(v0_neighs);}), end(externalNeighs) );
+
+        std::cout << "External neighbors of " << std::get<0>(it_i->first) << " after N(v0) removal" << std::endl;
+        for (auto element : externalNeighs) {
+          std::cout << element << " ";
+        }
+        std::cout << std::endl;
+
+        externalNeighs.erase(std::remove(externalNeighs.begin(), externalNeighs.end(), v0), externalNeighs.end());
+
+        std::cout << "External neighbors of " << std::get<0>(it_i->first) << " after v0 removal" << std::endl;
+        for (auto element : externalNeighs) {
+          std::cout << element << " ";
+        }
+        std::cout << std::endl;
 
         ++it_j;
       }
