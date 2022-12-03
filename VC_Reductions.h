@@ -449,6 +449,17 @@ struct SET_STRUCTION_F {
   }
 };
 
+template <typename T, typename SM> 
+struct GET_STRUCTION_SET_F {
+  T *performStruction;
+  const SM &G;
+
+  explicit GET_STRUCTION_SET_F(T *_performStruction, const SM &_G) : performStruction(_performStruction), G(_G) {}
+  inline bool operator()(uintE i) {
+    return performStruction[i];
+  }
+};
+
 
 template <typename T, typename SM> struct STRUCTION_OP_F {
   T *numberAntiEdges;
@@ -601,37 +612,32 @@ template <typename T, typename SM> struct SET_NUM_STRUCTION_NEIGHBORS_F {
 };
 
 
-template <typename T, typename SM> struct SET_LARGEST_DEGREE_STRUCT_F {
+template <typename T, typename SM> struct SET_LARGEST_VERTEX_STRUCT_F {
   T *maxVertex;
-  T *maxDegree;
+  T *numStructionNeighbors;
   T *performStruction;
    // vertex* V;
   // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
   SM &G;
-  SET_LARGEST_DEGREE_STRUCT_F(T* _maxVertex, T* _maxDegree, T* _performStruction, SM &_G) : 
+  SET_LARGEST_VERTEX_STRUCT_F(T* _maxVertex, T* _numStructionNeighbors, T* _performStruction, SM &_G) : 
   maxVertex(_maxVertex),
-  maxDegree(_maxDegree),
+  numStructionNeighbors(_numStructionNeighbors),
   performStruction(_performStruction),
-
   G(_G)  {}
   // Only set this for non-struction v_0, looking for examples 
   // where non-struction v_0 is neighbors with two struction candidates.
   inline bool update(uint32_t s, uint32_t d) { // Update
-    if (!performStruction[d]){
-      if (performStruction[s] > maxDegree[d]){
-        maxDegree[d] = performStruction[s];
-      } else if (performStruction[s] == maxDegree[d] && h(maxVertex[d]) < h(s)){
+    if (numStructionNeighbors[d] > 1){
+      if (performStruction[s] && h(s) > h(maxVertex[d])){
         maxVertex[d] = s;
       }
     }
     return true;
   }
-  // Assumes undirected graph
+  // May need to use the write_min and cmp and swap formalism from Bellman-Ford
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    if (!performStruction[d]){
-      if (performStruction[s] > maxDegree[d]){
-        maxDegree[d] = performStruction[s];
-      } else if (performStruction[s] == maxDegree[d] && h(maxVertex[d]) < h(s)){
+    if (numStructionNeighbors[d] > 1){
+      if (performStruction[s] && h(s) > h(maxVertex[d])){
         maxVertex[d] = s;
       }
     }
@@ -646,28 +652,32 @@ template <typename T, typename SM> struct SET_LARGEST_DEGREE_STRUCT_F {
 
 template <typename T, typename SM> struct RESOLVE_CONFLICTS_STRUCT_F {
   T *maxVertex;
+  T *numStructionNeighbors;
   T *performStruction;
+
    // vertex* V;
   // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
   SM &G;
-  RESOLVE_CONFLICTS_STRUCT_F(T* _maxVertex, T* _performStruction, SM &_G) : 
+  RESOLVE_CONFLICTS_STRUCT_F(T* _maxVertex, T* _numStructionNeighbors, T* _performStruction, SM &_G) : 
   maxVertex(_maxVertex),
+  numStructionNeighbors(_numStructionNeighbors),
   performStruction(_performStruction),
 
   G(_G)  {}
   // Only set this for non-struction v_0, looking for examples 
   // where non-struction v_0 is neighbors with two struction candidates.
   inline bool update(uint32_t s, uint32_t d) { // Update
-    if (performStruction[d] && maxVertex[s] != d){
+    if (numStructionNeighbors[s] > 1 && maxVertex[s] != d){
       performStruction[d] = 0;
     }
-    return true;
+    return false;
   }
   // Assumes undirected graph
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    if (performStruction[d] && maxVertex[s] != d){
+    if (numStructionNeighbors[s] > 1 && maxVertex[s] != d){
       performStruction[d] = 0;
     }
+    return false;
   }
   
   // cond function checks if vertex has non-zero degree
@@ -777,7 +787,7 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
 
   VertexSubset struction = approxGraph.edgeMap(remaining_vertices, SET_ANTI_EDGES_F(numberAntiEdges, approxGraph), true, 20);
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] /= 2; }
-  VertexSubset structionSet = approxGraph.vertexMap(remaining_vertices, SET_STRUCTION_F(numberAntiEdges, performStruction, approxGraph), true); // mark visited
+  VertexSubset firstStructionSet = approxGraph.vertexMap(remaining_vertices, SET_STRUCTION_F(numberAntiEdges, performStruction, approxGraph), true); // mark visited
   printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", j);
@@ -812,11 +822,22 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
     printf("%lu ", numStructionNeighbors[j]);
   }
   printf("\n");
-  /*
-  VertexSubset maxDegree = approxGraph.edgeMap(remaining_vertices, SET_LARGEST_DEGREE_STRUCT_F(maxVertex, numberAntiEdges, performStruction, approxGraph), true, 20);
-  VertexSubset fin = approxGraph.edgeMap(remaining_vertices, RESOLVE_CONFLICTS_STRUCT_F(maxVertex, performStruction, approxGraph), true, 20);
-  */
+ 
+  VertexSubset maxDegree = approxGraph.edgeMap(remaining_vertices, SET_LARGEST_VERTEX_STRUCT_F(maxVertex, numStructionNeighbors, performStruction, approxGraph), true, 20);
+  printf("\nmaxDegree\n");
+  for (uint32_t j = 0; j < n; j++) {
+    printf("%lu ", maxVertex[j]);
+  }
+  printf("\n");
 
+  VertexSubset fin = approxGraph.edgeMap(remaining_vertices, RESOLVE_CONFLICTS_STRUCT_F(maxVertex, numStructionNeighbors, performStruction, approxGraph), true, 20);
+  printf("\nResolve conflicts\n");
+  for (uint32_t j = 0; j < n; j++) {
+    printf("%lu ", performStruction[j]);
+  }
+  printf("\n");  
+
+  VertexSubset structionSet = approxGraph.vertexMap(remaining_vertices, GET_STRUCTION_SET_F(performStruction, approxGraph), true); // mark visited
 
   while (structionSet.non_empty()){
     uint32_t v0 = structionSet.pop();
