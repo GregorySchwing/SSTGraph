@@ -547,6 +547,60 @@ template <typename T, typename SM> struct SOLVE_MIS_F {
   }
 };
 
+
+template <typename T, typename SM> struct SET_NUM_STRUCTION_NEIGHBORS_F {
+  T *performStruction;
+  T *numStructionNeighbors;
+
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  const SM &G;
+  SET_NUM_STRUCTION_NEIGHBORS_F(T *_performStruction, T *_numStructionNeighbors, const SM &_G) : 
+  performStruction(_performStruction), 
+  numStructionNeighbors(_numStructionNeighbors),
+  G(_G)  {}
+
+  /*
+    In dense mode, EdgeMap loops over all vertices and
+    looks at incoming edges to see if the source is part of the
+    vertex set. This does not require locking because each vertex
+    only updates itself and is preferred when the vertex set is large.
+
+    I am the destination.  I only update inCover[d].
+    Degrees are const in this class.
+
+  */
+
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    if (performStruction[s])
+      numStructionNeighbors[d] += performStruction[s];
+    return false;
+  }
+  /*
+    In sparse mode, EdgeMap
+    iterates over the outgoing edges of each vertex in the subset
+    and updates the destination vertex for each edge. Because it_i is
+    run in parallel, synchronization must be used when accessing
+    the destination vertex data.
+
+    I am the source.  I update inCover[d] using synchronization.
+    Degrees are const in this class.
+
+  */
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    if (performStruction[s]){
+      __sync_fetch_and_and(&numStructionNeighbors[d], performStruction[s]);
+    }
+    return false;
+  }
+  // cond function checks if vertex in remaining vertices set has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+    //return G.getDegree(d) > 0;
+  }
+};
+
+
 template <typename T, typename SM> struct SET_LARGEST_DEGREE_STRUCT_F {
   T *maxVertex;
   T *maxDegree;
@@ -705,6 +759,7 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   int32_t *numberAntiEdges = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *performStruction = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *maxVertex = (int32_t *)malloc(n * sizeof(int32_t));
+  int32_t *numStructionNeighbors = (int32_t *)malloc(n * sizeof(int32_t));
 
   int32_t b_size = 10000; 
   int32_t b_used = 0; 
@@ -716,6 +771,8 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] = 0; }
   parallel_for(int64_t i = 0; i < n; i++) { performStruction[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { numStructionNeighbors[i] = 0; }
+
   parallel_for(int64_t i = 0; i < n; i++) { maxVertex[i] = 0; }
 
   VertexSubset struction = approxGraph.edgeMap(remaining_vertices, SET_ANTI_EDGES_F(numberAntiEdges, approxGraph), true, 20);
@@ -731,15 +788,47 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   }
   printf("\n");
 
+  VertexSubset structionMIS = approxGraph.edgeMap(remaining_vertices, SOLVE_MIS_F(performStruction, approxGraph), true, 20);
+  printf("MIS\n");
+
+  printf("Vertices\n");
+  for (uint32_t j = 0; j < n; j++) {
+    printf("%lu ", j);
+  }
+  printf("\nStruction flags\n");
+  for (uint32_t j = 0; j < n; j++) {
+    printf("%lu ", performStruction[j]);
+  }
+  printf("\n");
+  VertexSubset structionDeg = approxGraph.edgeMap(remaining_vertices, SET_NUM_STRUCTION_NEIGHBORS_F(performStruction, numStructionNeighbors, approxGraph), true, 20);
+  printf("Degree of struct\n");
+
+  printf("Vertices\n");
+  for (uint32_t j = 0; j < n; j++) {
+    printf("%lu ", j);
+  }
+  printf("\nNum neighbors with set flags\n");
+  for (uint32_t j = 0; j < n; j++) {
+    printf("%lu ", numStructionNeighbors[j]);
+  }
+  printf("\n");
+  /*
+  VertexSubset maxDegree = approxGraph.edgeMap(remaining_vertices, SET_LARGEST_DEGREE_STRUCT_F(maxVertex, numberAntiEdges, performStruction, approxGraph), true, 20);
+  VertexSubset fin = approxGraph.edgeMap(remaining_vertices, RESOLVE_CONFLICTS_STRUCT_F(maxVertex, performStruction, approxGraph), true, 20);
+  */
+
+
   while (structionSet.non_empty()){
     uint32_t v0 = structionSet.pop();
     printf("Perform struct operation on %lu\n", v0);
     G.print_neighbors(v0);
     std::vector<el_t> v0_neighs = G.get_neighbors(v0);
+    /*
     printf("Neighbors of %lu\n", v0);
     for (int i = 0; i < v0_neighs.size(); ++i)
       printf("%u \n", v0_neighs[i]);
     printf("\n");
+    */
     int usedVertexCounter = 0;
     std::map<std::tuple<el_t,el_t>,el_t> antiEdgeToNodeMap;
     for (int i = 0; i < v0_neighs.size(); ++i)
@@ -764,8 +853,16 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       // remove the vertices {v0; v1; ... ; vp} from G and
       // introduce a new node vij for every anti-edge {vi; vj} in G
       // where 0 < i < j <= p;
-
-
+      VertexSubset Nv0 = VertexSubset(0, n, true); // initial set contains all vertices
+      printf("VMAP of NV0 b4 add\n");
+      Nv0.print();
+      for (int i = 0; i < v0_neighs.size(); ++i){
+        printf("ADD NEIGHBOR %lu\n",v0_neighs[i]);
+        Nv0.insert(v0_neighs[i]);
+      }
+      printf("VMAP of NV0 after add\n");
+      Nv0.print();
+      
       it_j = std::next(it_i, 1);
       while (it_j != antiEdgeToNodeMap.end())
       {
@@ -831,11 +928,7 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       ++it_i;
     }
   }
-  /*
-  VertexSubset structionMIS = approxGraph.edgeMap(remaining_vertices, SOLVE_MIS_F(performStruction, approxGraph), true, 20);
-  VertexSubset maxDegree = approxGraph.edgeMap(remaining_vertices, SET_LARGEST_DEGREE_STRUCT_F(maxVertex, numberAntiEdges, performStruction, approxGraph), true, 20);
-  VertexSubset fin = approxGraph.edgeMap(remaining_vertices, RESOLVE_CONFLICTS_STRUCT_F(maxVertex, performStruction, approxGraph), true, 20);
-  */
+
   free(numberAntiEdges);
   free(performStruction);
   free(maxVertex);
