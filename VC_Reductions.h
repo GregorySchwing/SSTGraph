@@ -788,6 +788,7 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   VertexSubset struction = approxGraph.edgeMap(remaining_vertices, SET_ANTI_EDGES_F(numberAntiEdges, approxGraph), true, 20);
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] /= 2; }
   VertexSubset firstStructionSet = approxGraph.vertexMap(remaining_vertices, SET_STRUCTION_F(numberAntiEdges, performStruction, approxGraph), true); // mark visited
+  /*
   printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", j);
@@ -797,10 +798,10 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
     printf("%lu ", performStruction[j]);
   }
   printf("\n");
-
+  */
   VertexSubset structionMIS = approxGraph.edgeMap(remaining_vertices, SOLVE_MIS_F(performStruction, approxGraph), true, 20);
+  /*
   printf("MIS\n");
-
   printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", j);
@@ -810,9 +811,10 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
     printf("%lu ", performStruction[j]);
   }
   printf("\n");
+  */
   VertexSubset structionDeg = approxGraph.edgeMap(remaining_vertices, SET_NUM_STRUCTION_NEIGHBORS_F(performStruction, numStructionNeighbors, approxGraph), true, 20);
+  /*
   printf("Degree of struct\n");
-
   printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", j);
@@ -822,21 +824,23 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
     printf("%lu ", numStructionNeighbors[j]);
   }
   printf("\n");
- 
+  */
   VertexSubset maxDegree = approxGraph.edgeMap(remaining_vertices, SET_LARGEST_VERTEX_STRUCT_F(maxVertex, numStructionNeighbors, performStruction, approxGraph), true, 20);
+  /*
   printf("\nmaxDegree\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", maxVertex[j]);
   }
   printf("\n");
-
+  */
   VertexSubset fin = approxGraph.edgeMap(remaining_vertices, RESOLVE_CONFLICTS_STRUCT_F(maxVertex, numStructionNeighbors, performStruction, approxGraph), true, 20);
+  /*
   printf("\nResolve conflicts\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", performStruction[j]);
   }
   printf("\n");  
-
+  */
   VertexSubset structionSet = approxGraph.vertexMap(remaining_vertices, GET_STRUCTION_SET_F(performStruction, approxGraph), true); // mark visited
 
   while (structionSet.non_empty()){
