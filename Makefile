@@ -7,8 +7,10 @@ TINYSET_32?=0
 NO_INLINE_TINYSET?=0
 PARALLEL=0
 
+# Add empty variable to add flags over command line
+CDBG +=
 CFLAGS := -Wall -Wno-address-of-packed-member -Wextra -O$(OPT) -g  -std=c++17
-
+CFLAGS += $(CDBG)
 
 ifeq ($(OPENMP),1)
 PARALLEL=1
