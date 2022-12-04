@@ -559,30 +559,89 @@ template <typename T, typename SM> struct DELETE_NEIGHBORHOOD_OF_STRUCTION_VERTE
 
 
 template <typename T, typename SM> struct STRUCTION_OP_F {
-  T *numberAntiEdges;
+  T *performStruction;
+  T *maxVertex;
+  T *numStructionNeighbors;
+  T *numToEdgesRemove;
+  T *maxNumToEdgesRemove;
   std::tuple<el_t, el_t> *edgesToRemove;
   // vertex* V;
   // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
   SM &G;
-  STRUCTION_OP_F(T* _numberAntiEdges, SM &_G) : 
-  numberAntiEdges(_numberAntiEdges),
+  STRUCTION_OP_F(T *_performStruction, T *_maxVertex, T *_numStructionNeighbors, std::tuple<el_t, el_t> *_edgesToRemove, 
+  T *_numToEdgesRemove, T *_maxNumToEdgesRemove, SM &_G) : 
+  performStruction(_performStruction),
+  maxVertex(_maxVertex),
+  numStructionNeighbors(_numStructionNeighbors),
+  maxNumToEdgesRemove(_maxNumToEdgesRemove),
+  numToEdgesRemove(_numToEdgesRemove),
+  edgesToRemove(_edgesToRemove),
   G(_G)  {}
-  // Assumes undirected graph
   inline bool update(uint32_t s, uint32_t d) { // Update
-    //  Self-edges aren't considered in common neighbors, 
-    //  therefore, the source isn't included in the common neighbors
-    //  of the destination, so subtract 1.
-    numberAntiEdges[d] += (G.getDegree(d) - G.common_neighbors(s,d) - 1);
-    //printf("s %u d %u nAE %u degree(%u) : %u common neighbors (%u, %u) : %u\n", s , d, G.getDegree(d) - G.common_neighbors(s,d) - 1,
-    //d, G.getDegree(d), s, d, G.common_neighbors(s,d));
-    return true;
+    bool deletedEdge = false;
+    if (performStruction[d]){
+      if (G.has(s,d)){
+        uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+        if (edgeIndex < *maxNumToEdgesRemove) 
+          edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
+        deletedEdge = true;
+      }
+      if (G.has(d,s)){
+        uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+        if (edgeIndex < *maxNumToEdgesRemove) 
+          edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
+        deletedEdge = true;
+      }
+    } else if (numStructionNeighbors[d]){
+        bool deletedEdge = false;
+        // source has an edge to the struction v0
+        if (G.has(s,maxVertex[d])){
+          uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+          if (edgeIndex < *maxNumToEdgesRemove) 
+            edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
+          deletedEdge = true;
+        }
+        if (G.has(maxVertex[d],s)){
+          uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+          if (edgeIndex < *maxNumToEdgesRemove) 
+            edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
+          deletedEdge = true;
+        }
+    }
+    return deletedEdge;
   }
-  // Assumes undirected graph
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    // Assuming I am not a neighbor to myself,
-    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
-    uint32_t edgeIndex = __sync_fetch_and_add(&numberAntiEdges[d], (G.getDegree(d) - G.common_neighbors(s,d) - 1));
-    return true;
+    bool deletedEdge = false;
+    if (performStruction[s]){
+      if (G.has(s,d)){
+        uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+        if (edgeIndex < *maxNumToEdgesRemove) 
+          edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
+        deletedEdge = true;
+      }
+      if (G.has(d,s)){
+        uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+        if (edgeIndex < *maxNumToEdgesRemove) 
+          edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
+        deletedEdge = true;
+      }
+    } else if (numStructionNeighbors[s]){
+        bool deletedEdge = false;
+        // source has an edge to the struction v0
+        if (G.has(d,maxVertex[s])){
+          uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+          if (edgeIndex < *maxNumToEdgesRemove) 
+            edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
+          deletedEdge = true;
+        }
+        if (G.has(maxVertex[s],d)){
+          uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+          if (edgeIndex < *maxNumToEdgesRemove) 
+            edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
+          deletedEdge = true;
+        }
+    }
+    return deletedEdge;
   }
   
   // cond function checks if vertex has non-zero degree
@@ -590,7 +649,6 @@ template <typename T, typename SM> struct STRUCTION_OP_F {
     return true;
   }
 };
-
 
 template <typename T, typename SM> struct SOLVE_MIS_F {
   T *performStruction;
@@ -977,6 +1035,7 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       // remove the vertices {v0; v1; ... ; vp} from G and
       // introduce a new node vij for every anti-edge {vi; vj} in G
       // where 0 < i < j <= p;
+      /*
       VertexSubset Nv0 = VertexSubset(0, n, true); // initial set contains all vertices
       printf("VMAP of NV0 b4 add\n");
       Nv0.print();
@@ -986,7 +1045,8 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       }
       printf("VMAP of NV0 after add\n");
       Nv0.print();
-      
+      */
+
       it_j = std::next(it_i, 1);
       while (it_j != antiEdgeToNodeMap.end())
       {
@@ -1016,39 +1076,67 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
           printf("Adding edge (%lu, %lu)-(%lu, %lu) in new neighborhood\n",std::get<0>(it_i->first), std::get<1>(it_i->first),
           std::get<0>(it_j->first), std::get<1>(it_j->first));
         }
-
-        
-        // Condition 4 - 
-        // for every u not in {v0; ... ; vp}, 
-        // add the edge (vij ; u) if (vi; u)
-        // or (vj ; u) is an edge in G.
-        std::vector<el_t> externalNeighs = G.get_neighbors(std::get<0>(it_i->first));
-
-        std::cout << "External neighbors of " << std::get<0>(it_i->first) << " before removal" << std::endl;
-        for (auto element : externalNeighs) {
-          std::cout << element << " ";
-        }
-        std::cout << std::endl;
-
-        externalNeighs.erase( remove_if( begin(externalNeighs),end(externalNeighs),
-            [&](auto x){return find(begin(v0_neighs),end(v0_neighs),x)!=end(v0_neighs);}), end(externalNeighs) );
-
-        std::cout << "External neighbors of " << std::get<0>(it_i->first) << " after N(v0) removal" << std::endl;
-        for (auto element : externalNeighs) {
-          std::cout << element << " ";
-        }
-        std::cout << std::endl;
-
-        externalNeighs.erase(std::remove(externalNeighs.begin(), externalNeighs.end(), v0), externalNeighs.end());
-
-        std::cout << "External neighbors of " << std::get<0>(it_i->first) << " after v0 removal" << std::endl;
-        for (auto element : externalNeighs) {
-          std::cout << element << " ";
-        }
-        std::cout << std::endl;
-
         ++it_j;
       }
+      // Condition 4 - 
+      // for every u not in {v0; ... ; vp}, 
+      // add the edge (vij ; u) if (vi; u)
+      // or (vj ; u) is an edge in G.
+
+      // exnoi
+      std::cout << "Find external neighbors of i " << std::get<0>(it_i->first) << std::endl;
+
+      std::vector<el_t> externalNeighborsOf_i = G.get_neighbors(std::get<0>(it_i->first));
+
+      std::cout << "External neighbors of " << std::get<0>(it_i->first) << " before removal" << std::endl;
+      for (auto element : externalNeighborsOf_i) {
+        std::cout << element << " ";
+      }
+      std::cout << std::endl;
+
+      externalNeighborsOf_i.erase( remove_if( begin(externalNeighborsOf_i),end(externalNeighborsOf_i),
+          [&](auto x){return find(begin(v0_neighs),end(v0_neighs),x)!=end(v0_neighs);}), end(externalNeighborsOf_i) );
+
+      std::cout << "External neighbors of " << std::get<0>(it_i->first) << " after N(v0) removal" << std::endl;
+      for (auto element : externalNeighborsOf_i) {
+        std::cout << element << " ";
+      }
+      std::cout << std::endl;
+
+      externalNeighborsOf_i.erase(std::remove(externalNeighborsOf_i.begin(), externalNeighborsOf_i.end(), v0), externalNeighborsOf_i.end());
+
+      std::cout << "External neighbors of " << std::get<0>(it_i->first) << " after v0 removal" << std::endl;
+      for (auto element : externalNeighborsOf_i) {
+        std::cout << element << " ";
+      }
+      std::cout << std::endl;
+
+      // exnoj
+      std::vector<el_t> externalNeighborsOf_j = G.get_neighbors(std::get<1>(it_i->first));
+      std::cout << "Find external neighbors of j " << std::get<1>(it_i->first) << std::endl;
+      std::cout << "External neighbors of " << std::get<1>(it_i->first) << " before removal" << std::endl;
+      for (auto element : externalNeighborsOf_j) {
+        std::cout << element << " ";
+      }
+      std::cout << std::endl;
+
+      externalNeighborsOf_j.erase( remove_if( begin(externalNeighborsOf_j),end(externalNeighborsOf_j),
+          [&](auto x){return find(begin(v0_neighs),end(v0_neighs),x)!=end(v0_neighs);}), end(externalNeighborsOf_j) );
+
+      std::cout << "External neighbors of " << std::get<1>(it_i->first) << " after N(v0) removal" << std::endl;
+      for (auto element : externalNeighborsOf_j) {
+        std::cout << element << " ";
+      }
+      std::cout << std::endl;
+
+      externalNeighborsOf_j.erase(std::remove(externalNeighborsOf_j.begin(), externalNeighborsOf_j.end(), v0), externalNeighborsOf_j.end());
+
+      std::cout << "External neighbors of " << std::get<1>(it_i->first) << " after v0 removal" << std::endl;
+      for (auto element : externalNeighborsOf_j) {
+        std::cout << element << " ";
+      }
+      std::cout << std::endl;
+
       ++it_i;
     }
   }
