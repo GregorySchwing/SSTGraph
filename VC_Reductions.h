@@ -3,6 +3,7 @@
 #include "ProgressBar.h"
 #include <map>
 #include <iterator>
+#include <algorithm> // std::set_union, std::sort
 // This code is part of the project "Ligra: A Lightweight Graph Processing
 // Framework for Shared Memory", presented at Principles and Practice of
 // Parallel Programming, 2013.
@@ -1035,17 +1036,6 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       // remove the vertices {v0; v1; ... ; vp} from G and
       // introduce a new node vij for every anti-edge {vi; vj} in G
       // where 0 < i < j <= p;
-      /*
-      VertexSubset Nv0 = VertexSubset(0, n, true); // initial set contains all vertices
-      printf("VMAP of NV0 b4 add\n");
-      Nv0.print();
-      for (int i = 0; i < v0_neighs.size(); ++i){
-        printf("ADD NEIGHBOR %lu\n",v0_neighs[i]);
-        Nv0.insert(v0_neighs[i]);
-      }
-      printf("VMAP of NV0 after add\n");
-      Nv0.print();
-      */
 
       it_j = std::next(it_i, 1);
       while (it_j != antiEdgeToNodeMap.end())
@@ -1136,6 +1126,23 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
         std::cout << element << " ";
       }
       std::cout << std::endl;
+
+      // Using default function
+      std::vector<el_t> unionOfExternalNeighborsOfIAndJ;
+      std::set_union(externalNeighborsOf_i.begin(), externalNeighborsOf_i.end(), externalNeighborsOf_j.begin(), externalNeighborsOf_j.end(), std::back_inserter(unionOfExternalNeighborsOfIAndJ));
+      std::cout << "External neighbors of I and J are :\n";
+        for (const auto &i : unionOfExternalNeighborsOfIAndJ) {
+            std::cout << i << ' ';
+        }   
+        std::cout << '\n';
+      /*
+      if (std::get<0>(it_i->first) != std::get<0>(it_j->first)){
+        edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_i->second, it_j->second};
+        edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_j->second, it_i->second};
+        printf("Adding edge (%lu, %lu)-(%lu, %lu) in new neighborhood\n",std::get<0>(it_i->first), std::get<1>(it_i->first),
+        std::get<0>(it_j->first), std::get<1>(it_j->first));
+      }
+      */
 
       ++it_i;
     }
