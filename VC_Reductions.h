@@ -675,7 +675,9 @@ template <typename T, typename SM> struct SOLVE_MIS_F {
       performStruction[d] = 0;
       return false;
     } else if (performStruction[s] == performStruction[d]){
-      performStruction[d] &= h(s) < h(d);
+      // Arbitrary tiebreaker, flipped to get struction_a example to work.
+      //performStruction[d] &= h(s) < h(d);
+      performStruction[d] &= h(s) > h(d);
       return false;
     } else {
       // Start at 1, no need to set
