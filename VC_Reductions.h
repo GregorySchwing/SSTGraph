@@ -983,13 +983,24 @@ template <typename T, typename SM> struct TRIANGLE_REDUCTION_RULE_F {
 class VC_Reductions {
   public:
     template <typename SM> int32_t* RemoveMaxApproximateMVC(SM &G);
-    template <typename SM> int32_t* Struction(SM &G);
-
+    template <typename SM> bool ChenRemoveMaxApproximateMVC(SM &G);
+    //template <typename SM> int32_t* Struction(SM &G);
+template <typename SM> bool Struction(SM &approxGraph,
+                                                    VertexSubset &remaining_vertices,
+                                                    int32_t *numberAntiEdges,
+                                                    int32_t *performStruction,
+                                                    int32_t *maxVertex,
+                                                    int32_t *numStructionNeighbors,
+                                                    int32_t b_size,
+                                                    std::tuple<el_t, el_t> *edgesToRemove,
+                                                    std::tuple<el_t, el_t> *edgesToInsert,
+                                                    int32_t &removeCounter,
+                                                    int32_t &insertCounter);
 };
 
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
-template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
+template <typename SM> bool VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G){
   SparseMatrixV<true, bool> approxGraph(G);
   int64_t n = approxGraph.get_rows(); 
   int32_t *numberAntiEdges = (int32_t *)malloc(n * sizeof(int32_t));
@@ -998,13 +1009,55 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   int32_t *numStructionNeighbors = (int32_t *)malloc(n * sizeof(int32_t));
 
   int32_t b_size = 10000; 
-  int32_t b_used = 0; 
   std::tuple<el_t, el_t> *edgesToRemove = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
   std::tuple<el_t, el_t> *edgesToInsert = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
-  int32_t removeCounter;
-  int32_t insertCounter;
+  int32_t removeCounter = 0;
+  int32_t insertCounter = 0;
 
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
+  
+Struction(approxGraph,
+                                                    remaining_vertices,
+                                                    numberAntiEdges,
+                                                    performStruction,
+                                                    maxVertex,
+                                                    numStructionNeighbors,
+                                                    b_size,
+                                                    edgesToRemove,
+                                                    edgesToInsert,
+                                                    removeCounter,
+                                                    insertCounter);
+
+  printf("\nBefore batch changes\n");
+  approxGraph.print_arrays();
+  approxGraph.remove_batch(edgesToRemove, min(removeCounter, b_size));
+  approxGraph.insert_batch(edgesToInsert, min(insertCounter, b_size));
+  printf("\nAfter batch changes\n");
+  approxGraph.print_arrays();
+  free(numberAntiEdges);
+  free(performStruction);
+  free(maxVertex);
+  free(numStructionNeighbors);
+  free(edgesToRemove);
+  free(edgesToInsert);
+  exit(1);
+}
+
+//template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
+template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
+                                                    VertexSubset &remaining_vertices,
+                                                    int32_t *numberAntiEdges,
+                                                    int32_t *performStruction,
+                                                    int32_t *maxVertex,
+                                                    int32_t *numStructionNeighbors,
+                                                    int32_t b_size,
+                                                    std::tuple<el_t, el_t> *edgesToRemove,
+                                                    std::tuple<el_t, el_t> *edgesToInsert,
+                                                    int32_t &removeCounter,
+                                                    int32_t &insertCounter){
+  bool structionPerformed = false;
+  int64_t n = approxGraph.get_rows(); 
+
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] = 0; }
   parallel_for(int64_t i = 0; i < n; i++) { performStruction[i] = 0; }
   parallel_for(int64_t i = 0; i < n; i++) { numStructionNeighbors[i] = 0; }
@@ -1069,16 +1122,17 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   */
   VertexSubset structionSetAndNeighbors = approxGraph.vertexMap(remaining_vertices, GET_STRUCTION_SET_AND_NEIGHBORS_F(performStruction, numStructionNeighbors, approxGraph), true); // mark visited
   //VertexSubset structionSetAndNeighborsDeleted = approxGraph.edgeMap(remaining_vertices, DELETE_NEIGHBORHOOD_OF_STRUCTION_VERTEX_F(performStruction, maxVertex, numStructionNeighbors, edgesToRemove, &b_used, &b_size, approxGraph), true); // mark visited
-  VertexSubset structionSetAndNeighborsDeleted = approxGraph.edgeMap(structionSetAndNeighbors, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &b_used, &b_size, approxGraph), true); // mark visited
+  VertexSubset structionSetAndNeighborsDeleted = approxGraph.edgeMap(structionSetAndNeighbors, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &removeCounter, &b_size, approxGraph), true); // mark visited
 
   VertexSubset structionSetOnly = approxGraph.vertexMap(remaining_vertices, GET_STRUCTION_SET_F(performStruction, numStructionNeighbors, approxGraph), true); // mark visited
 
   // Assuming all the insertions fit in one batch, this should complete the struction op.
   while (structionSetOnly.non_empty()){
+    structionPerformed = true;
     uint32_t v0 = structionSetOnly.pop();
     printf("Perform struct operation on %lu\n", v0);
-    G.print_neighbors(v0);
-    std::vector<el_t> v0_neighs = G.get_neighbors(v0);
+    approxGraph.print_neighbors(v0);
+    std::vector<el_t> v0_neighs = approxGraph.get_neighbors(v0);
     /*
     printf("Neighbors of %lu\n", v0);
     for (int i = 0; i < v0_neighs.size(); ++i)
@@ -1089,7 +1143,7 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
     std::map<std::tuple<el_t,el_t>,el_t> antiEdgeToNodeMap;
     for (int i = 0; i < v0_neighs.size(); ++i)
       for (int j = i+1; j < v0_neighs.size(); ++j){
-        if (!G.has(v0_neighs[i], v0_neighs[j]))
+        if (!approxGraph.has(v0_neighs[i], v0_neighs[j]))
           antiEdgeToNodeMap[std::tuple<el_t, el_t>{v0_neighs[i], v0_neighs[j]}] = v0_neighs[usedVertexCounter++];
       }
     for (auto& t : antiEdgeToNodeMap)
@@ -1124,7 +1178,7 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
         // add an edge (vir; vjs) if i = j and
         // (vr; vs) is an edge in G;
         if ((std::get<0>(it_i->first) == std::get<0>(it_j->first))
-              && G.has(std::get<1>(it_i->first), std::get<1>(it_j->first))){
+              && approxGraph.has(std::get<1>(it_i->first), std::get<1>(it_j->first))){
           edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_i->second, it_j->second};
           edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_j->second, it_i->second};
           printf("Adding edge (%lu, %lu)-(%lu, %lu) in new neighborhood\n",std::get<0>(it_i->first), std::get<1>(it_i->first),
@@ -1144,12 +1198,12 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       // Condition 4 - 
       // for every u not in {v0; ... ; vp}, 
       // add the edge (vij ; u) if (vi; u)
-      // or (vj ; u) is an edge in G.
+      // or (vj ; u) is an edge in approxGraph.
 
       // exnoi
       std::cout << "Find external neighbors of i " << std::get<0>(it_i->first) << std::endl;
 
-      std::vector<el_t> externalNeighborsOf_i = G.get_neighbors(std::get<0>(it_i->first));
+      std::vector<el_t> externalNeighborsOf_i = approxGraph.get_neighbors(std::get<0>(it_i->first));
 
       std::cout << "External neighbors of " << std::get<0>(it_i->first) << " before removal" << std::endl;
       for (auto element : externalNeighborsOf_i) {
@@ -1175,7 +1229,7 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       std::cout << std::endl;
 
       // exnoj
-      std::vector<el_t> externalNeighborsOf_j = G.get_neighbors(std::get<1>(it_i->first));
+      std::vector<el_t> externalNeighborsOf_j = approxGraph.get_neighbors(std::get<1>(it_i->first));
       std::cout << "Find external neighbors of j " << std::get<1>(it_i->first) << std::endl;
       std::cout << "External neighbors of " << std::get<1>(it_i->first) << " before removal" << std::endl;
       for (auto element : externalNeighborsOf_j) {
@@ -1214,18 +1268,7 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       ++it_i;
     }
   }
-  printf("\nBefore batch changes\n");
-  approxGraph.print_arrays();
-  approxGraph.remove_batch(edgesToRemove, min(b_used, b_size));
-  approxGraph.insert_batch(edgesToInsert, min(insertCounter, b_size));
-  printf("\nAfter batch changes\n");
-  approxGraph.print_arrays();
-  free(numberAntiEdges);
-  free(performStruction);
-  free(maxVertex);
-  free(edgesToRemove);
-  free(edgesToInsert);
-  exit(1);
+  return structionPerformed;
 }
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
