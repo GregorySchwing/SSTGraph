@@ -462,7 +462,21 @@ struct GET_STRUCTION_SET_F {
   G(_G) {}
   inline bool operator()(uintE i) {
     return performStruction[i];
-    //return performStruction[i] || numStructionNeighbors[i];
+  }
+};
+
+template <typename T, typename SM> 
+struct GET_STRUCTION_SET_AND_NEIGHBORS_F {
+  T *performStruction;
+  T *numStructionNeighbors;
+  const SM &G;
+
+  explicit GET_STRUCTION_SET_AND_NEIGHBORS_F(T *_performStruction, T *_numStructionNeighbors, const SM &_G) : 
+  performStruction(_performStruction), 
+  numStructionNeighbors(_numStructionNeighbors),
+  G(_G) {}
+  inline bool operator()(uintE i) {
+    return performStruction[i] || numStructionNeighbors[i];
   }
 };
 
@@ -549,6 +563,59 @@ template <typename T, typename SM> struct DELETE_NEIGHBORHOOD_OF_STRUCTION_VERTE
             edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
           deletedEdge = true;
         }
+    }
+    return deletedEdge;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
+
+
+template <typename T, typename SM> struct DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F {
+  T *numToEdgesRemove;
+  T *maxNumToEdgesRemove;
+  std::tuple<el_t, el_t> *edgesToRemove;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(std::tuple<el_t, el_t> *_edgesToRemove, 
+  T *_numToEdgesRemove, T *_maxNumToEdgesRemove, SM &_G) : 
+  maxNumToEdgesRemove(_maxNumToEdgesRemove),
+  numToEdgesRemove(_numToEdgesRemove),
+  edgesToRemove(_edgesToRemove),
+  G(_G)  {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    bool deletedEdge = false;
+    if (G.has(s,d)){
+      uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+      if (edgeIndex < *maxNumToEdgesRemove) 
+        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
+      deletedEdge = true;
+    }
+    if (G.has(d,s)){
+      uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+      if (edgeIndex < *maxNumToEdgesRemove) 
+        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
+      deletedEdge = true;
+    }
+    return deletedEdge;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    bool deletedEdge = false;
+    if (G.has(s,d)){
+      uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+      if (edgeIndex < *maxNumToEdgesRemove) 
+        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
+      deletedEdge = true;
+    }
+    if (G.has(d,s)){
+      uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+      if (edgeIndex < *maxNumToEdgesRemove) 
+        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
+      deletedEdge = true;
     }
     return deletedEdge;
   }
@@ -1000,12 +1067,15 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   }
   printf("\n");  
   */
-  VertexSubset structionSet = approxGraph.vertexMap(remaining_vertices, GET_STRUCTION_SET_F(performStruction, numStructionNeighbors, approxGraph), true); // mark visited
-  VertexSubset structionSet2 = approxGraph.edgeMap(remaining_vertices, DELETE_NEIGHBORHOOD_OF_STRUCTION_VERTEX_F(performStruction, maxVertex, numStructionNeighbors, edgesToRemove, &b_used, &b_size, approxGraph), true); // mark visited
+  VertexSubset structionSetAndNeighbors = approxGraph.vertexMap(remaining_vertices, GET_STRUCTION_SET_AND_NEIGHBORS_F(performStruction, numStructionNeighbors, approxGraph), true); // mark visited
+  //VertexSubset structionSetAndNeighborsDeleted = approxGraph.edgeMap(remaining_vertices, DELETE_NEIGHBORHOOD_OF_STRUCTION_VERTEX_F(performStruction, maxVertex, numStructionNeighbors, edgesToRemove, &b_used, &b_size, approxGraph), true); // mark visited
+  VertexSubset structionSetAndNeighborsDeleted = approxGraph.edgeMap(structionSetAndNeighbors, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &b_used, &b_size, approxGraph), true); // mark visited
+
+  VertexSubset structionSetOnly = approxGraph.vertexMap(remaining_vertices, GET_STRUCTION_SET_F(performStruction, numStructionNeighbors, approxGraph), true); // mark visited
 
   // Assuming all the insertions fit in one batch, this should complete the struction op.
-  while (structionSet.non_empty()){
-    uint32_t v0 = structionSet.pop();
+  while (structionSetOnly.non_empty()){
+    uint32_t v0 = structionSetOnly.pop();
     printf("Perform struct operation on %lu\n", v0);
     G.print_neighbors(v0);
     std::vector<el_t> v0_neighs = G.get_neighbors(v0);
