@@ -1142,7 +1142,12 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       ++it_i;
     }
   }
-
+  printf("\nBefore batch changes\n");
+  approxGraph.print_arrays();
+  approxGraph.remove_batch(edgesToRemove, min(b_used, b_size));
+  approxGraph.insert_batch(edgesToInsert, min(insertCounter, b_size));
+  printf("\nAfter batch changes\n");
+  approxGraph.print_arrays();
   free(numberAntiEdges);
   free(performStruction);
   free(maxVertex);
