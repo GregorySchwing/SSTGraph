@@ -461,7 +461,8 @@ struct GET_STRUCTION_SET_F {
   numStructionNeighbors(_numStructionNeighbors),
   G(_G) {}
   inline bool operator()(uintE i) {
-    return performStruction[i] || numStructionNeighbors[i];
+    return performStruction[i];
+    //return performStruction[i] || numStructionNeighbors[i];
   }
 };
 
@@ -1000,7 +1001,7 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
   VertexSubset structionSet = approxGraph.vertexMap(remaining_vertices, GET_STRUCTION_SET_F(performStruction, numStructionNeighbors, approxGraph), true); // mark visited
   VertexSubset structionSet2 = approxGraph.edgeMap(remaining_vertices, DELETE_NEIGHBORHOOD_OF_STRUCTION_VERTEX_F(performStruction, maxVertex, numStructionNeighbors, edgesToRemove, &b_used, &b_size, approxGraph), true); // mark visited
 
-
+  // Assuming all the insertions fit in one batch, this should complete the struction op.
   while (structionSet.non_empty()){
     uint32_t v0 = structionSet.pop();
     printf("Perform struct operation on %lu\n", v0);
@@ -1131,18 +1132,12 @@ template <typename SM> int32_t* VC_Reductions::Struction(SM &G){
       std::vector<el_t> unionOfExternalNeighborsOfIAndJ;
       std::set_union(externalNeighborsOf_i.begin(), externalNeighborsOf_i.end(), externalNeighborsOf_j.begin(), externalNeighborsOf_j.end(), std::back_inserter(unionOfExternalNeighborsOfIAndJ));
       std::cout << "External neighbors of I and J are :\n";
-        for (const auto &i : unionOfExternalNeighborsOfIAndJ) {
-            std::cout << i << ' ';
-        }   
-        std::cout << '\n';
-      /*
-      if (std::get<0>(it_i->first) != std::get<0>(it_j->first)){
-        edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_i->second, it_j->second};
-        edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_j->second, it_i->second};
-        printf("Adding edge (%lu, %lu)-(%lu, %lu) in new neighborhood\n",std::get<0>(it_i->first), std::get<1>(it_i->first),
-        std::get<0>(it_j->first), std::get<1>(it_j->first));
-      }
-      */
+      for (const auto &i : unionOfExternalNeighborsOfIAndJ) {
+          std::cout << i << ' ';
+          edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{it_i->second, i};
+          edgesToInsert[insertCounter++] = std::tuple<el_t, el_t>{i, it_i->second};
+      }   
+      std::cout << '\n';
 
       ++it_i;
     }
