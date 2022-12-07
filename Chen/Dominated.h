@@ -11,7 +11,7 @@ template <typename T, typename SM> struct SET_DOMINATED_F {
     return dominates[d];
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    uint32_t vertexDominates = __sync_fetch_and_or(&dominates[d], (G.common_neighbors(s,d) - G.getDegree(s) - 1) == 0);
+    uint32_t vertexDominates = __sync_or_and_fetch(&dominates[d], (G.common_neighbors(s,d) - G.getDegree(s) - 1) == 0);
     return true;
   }
   

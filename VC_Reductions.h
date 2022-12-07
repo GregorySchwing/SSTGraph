@@ -481,7 +481,8 @@ class VC_Reductions {
     //template <typename SM> int32_t* Struction(SM &G);
     template <typename SM> bool Dominated(SM &approxGraph,
                                           VertexSubset &remaining_vertices,
-                                          int32_t *isDominated,
+                                          int32_t *vertexDominates,
+                                          int32_t *solution,
                                           int32_t b_size,
                                           std::tuple<el_t, el_t> *edgesToRemove,
                                           int32_t &removeCounter);
@@ -546,26 +547,27 @@ Struction(approxGraph,
 
 template <typename SM> bool VC_Reductions::Dominated(SM &approxGraph,
                                                     VertexSubset &remaining_vertices,
-                                                    int32_t *isDominated,
+                                                    int32_t *vertexDominates,
+                                                    int32_t *solution,
                                                     int32_t b_size,
                                                     std::tuple<el_t, el_t> *edgesToRemove,
                                                     int32_t &removeCounter){
   int64_t n = approxGraph.get_rows(); 
-  parallel_for(int64_t i = 0; i < n; i++) { isDominated[i] = 0; }
-  VertexSubset dominates = approxGraph.edgeMap(remaining_vertices, SET_DOMINATED_F(isDominated, approxGraph), true, 20);
+  parallel_for(int64_t i = 0; i < n; i++) { vertexDominates[i] = 0; }
+  VertexSubset dominates = approxGraph.edgeMap(remaining_vertices, SET_DOMINATED_F(vertexDominates, approxGraph), true, 20);
+  bool vertexChanged = false;
+  VertexSubset vertices_to_delete;
   while (dominates.non_empty()) { // loop until no dominates remain
-    leafHasChanged = true;
-    b_used = 0;
+    vertexChanged = true;
+    removeCounter = 0;
     //__sync_fetch_and_and(&b_used, 0);
     // returns vertices to delete
-    vertices_to_delete = approxGraph.edgeMap(remaining_vertices, DELETE_VERTEX_F(inCover, solution, edgesToRemove, &b_used, &b_size, approxGraph), true, 20);
+    vertices_to_delete = approxGraph.edgeMap(remaining_vertices, DELETE_VERTEX_F(vertexDominates, solution, edgesToRemove, &removeCounter, &b_size, approxGraph), true, 20);
     // Write phase
-    approxGraph.remove_batch(edgesToRemove, min(b_used, b_size));
-    //if(percentage < 95.0)
-    //  progressBar.printIterationBar(vertices_to_delete.get_n());
-    approxGraph.vertexMap(remaining_vertices, SET_LEAVES_1_F(isLeaf, approxGraph), false); // mark visited
-    dominates = approxGraph.edgeMap(remaining_vertices, BF_LEAVES_F(isLeaf, inCover), true, 20);
+    approxGraph.remove_batch(edgesToRemove, min(removeCounter, b_size));
+    dominates = approxGraph.edgeMap(remaining_vertices, SET_DOMINATED_F(vertexDominates, approxGraph), true, 20);
   }
+  return vertexChanged;
 }
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
