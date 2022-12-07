@@ -8,9 +8,12 @@ template <typename T, typename SM> struct SET_DOMINATED_F {
   inline bool update(uint32_t s, uint32_t d) { // Update
     // d dominates s; 
     // && (G.getDegree(d)!=1)) - avoid leaves, since they technically dominate
-    bool vertex_dominates = ((G.common_neighbors(s,d) - G.getDegree(s) - 1) == 0) && (G.getDegree(d)!=1);
+    bool vertex_dominates = ((G.getDegree(s) - G.common_neighbors(s,d) - 1) == 0) && (G.getDegree(d)!=1);
     if (vertex_dominates)
       printf("%u dominates %u\n", d,s);
+    else 
+      printf("%u doesn't dominates %u G.common_neighbors(s,d) : %u - G.getDegree(s) %u - 1) == 0) && (G.getDegree(d) %u !=1\n", d,s, G.common_neighbors(s,d), G.getDegree(s), G.getDegree(d));
+
     dominates[d] |= vertex_dominates;
     return dominates[d];
   }
