@@ -477,7 +477,7 @@ template <typename T, typename SM> struct TRIANGLE_REDUCTION_RULE_F {
 class VC_Reductions {
   public:
     template <typename SM> int32_t* RemoveMaxApproximateMVC(SM &G);
-    template <typename SM> bool ChenRemoveMaxApproximateMVC(SM &G);
+    template <typename SM> int32_t* ChenRemoveMaxApproximateMVC(SM &G);
     //template <typename SM> int32_t* Struction(SM &G);
     template <typename SM> bool Dominated(SM &approxGraph,
                                           VertexSubset &remaining_vertices,
@@ -501,9 +501,10 @@ class VC_Reductions {
 
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
-template <typename SM> bool VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G){
+template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G){
   SparseMatrixV<true, bool> approxGraph(G);
   int64_t n = approxGraph.get_rows(); 
+  int32_t *solution = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *numberAntiEdges = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *performStruction = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *maxVertex = (int32_t *)malloc(n * sizeof(int32_t));
@@ -516,32 +517,33 @@ template <typename SM> bool VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G){
   int32_t insertCounter = 0;
 
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
-  
-Struction(approxGraph,
-                                                    remaining_vertices,
-                                                    numberAntiEdges,
-                                                    performStruction,
-                                                    maxVertex,
-                                                    numStructionNeighbors,
-                                                    b_size,
-                                                    edgesToRemove,
-                                                    edgesToInsert,
-                                                    removeCounter,
-                                                    insertCounter);
+  Dominated(approxGraph,
+            remaining_vertices,
+            performStruction,
+            solution,
+            b_size,
+            edgesToRemove,
+            removeCounter);
+  Struction(approxGraph,
+            remaining_vertices,
+            numberAntiEdges,
+            performStruction,
+            maxVertex,
+            numStructionNeighbors,
+            b_size,
+            edgesToRemove,
+            edgesToInsert,
+            removeCounter,
+            insertCounter);
 
-  printf("\nBefore batch changes\n");
-  approxGraph.print_arrays();
-  approxGraph.remove_batch(edgesToRemove, min(removeCounter, b_size));
-  approxGraph.insert_batch(edgesToInsert, min(insertCounter, b_size));
-  printf("\nAfter batch changes\n");
-  approxGraph.print_arrays();
   free(numberAntiEdges);
   free(performStruction);
   free(maxVertex);
   free(numStructionNeighbors);
   free(edgesToRemove);
   free(edgesToInsert);
-  exit(1);
+
+  return solution;
 }
 
 
@@ -795,6 +797,15 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
       ++it_i;
     }
   }
+
+
+  printf("\nBefore batch changes\n");
+  approxGraph.print_arrays();
+  approxGraph.remove_batch(edgesToRemove, min(removeCounter, b_size));
+  approxGraph.insert_batch(edgesToInsert, min(insertCounter, b_size));
+  printf("\nAfter batch changes\n");
+  approxGraph.print_arrays();
+
   return structionPerformed;
 }
 

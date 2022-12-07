@@ -190,8 +190,13 @@ template <typename T, typename SM> struct VC_BnB_ROUND_2_F {
 template <typename SM> int32_t *VC_BnB_with_edge_map(SM &G) {
 
   VC_Reductions vcr;
+  int64_t n = G.get_rows();
+  if (n == 0) {
+    return nullptr;
+  }
+  int32_t *solution = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t * approxSolution = vcr.RemoveMaxApproximateMVC(G);
-  vcr.ChenRemoveMaxApproximateMVC(G);
+  int32_t * approxChenSolution = vcr.ChenRemoveMaxApproximateMVC(G);
   return approxSolution;
   
   // Prevent terminal input messing up progress bar display
@@ -202,17 +207,12 @@ template <typename SM> int32_t *VC_BnB_with_edge_map(SM &G) {
   newT.c_lflag &= ~(ICANON | ECHO);        // disable line buffering and feedback
   tcsetattr(STDIN_FILENO, TCSANOW, &newT); // set our new config
 
-  int64_t n = G.get_rows();
-  if (n == 0) {
-    return nullptr;
-  }
   // creates inCover array, initialized to all -1, except for start
   int32_t b_size = 10000; 
   int32_t b_used = 0; 
   std::tuple<el_t, el_t> *edgesToRemove = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
 
   int32_t *inCover = (int32_t *)malloc(n * sizeof(int32_t));
-  int32_t *solution = (int32_t *)malloc(n * sizeof(int32_t));
   
   // Need to do batch removes, by virtue of how edges need to exist for 
   // edge map to find the edges to remove.
