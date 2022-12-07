@@ -505,6 +505,9 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
   SparseMatrixV<true, bool> approxGraph(G);
   int64_t n = approxGraph.get_rows(); 
   int32_t *solution = (int32_t *)malloc(n * sizeof(int32_t));
+
+  parallel_for(int64_t i = 0; i < n; i++) { solution[i] = 0; }
+
   int32_t *numberAntiEdges = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *performStruction = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t *maxVertex = (int32_t *)malloc(n * sizeof(int32_t));
@@ -574,6 +577,8 @@ template <typename SM> bool VC_Reductions::Dominated(SM &approxGraph,
   bool vertexChanged = false;
   VertexSubset vertices_to_delete;
   while (dominates.non_empty()) { // loop until no dominates remain
+    printf("DOMINATING VERTICES\n");
+    dominates.print();
     vertexChanged = true;
     removeCounter = 0;
     //__sync_fetch_and_and(&b_used, 0);
