@@ -864,18 +864,28 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
                                                     int32_t &insertCounter){
   bool crownFound = false;
   int64_t n = approxGraph.get_rows(); 
-
+  int64_t count = 0;
   parallel_for(int64_t i = 0; i < n; i++) { match[i] = 0; }
   parallel_for(int64_t i = 0; i < n; i++) { requests[i] = 0; }
   parallel_for(int64_t i = 0; i < n; i++) { crowns[i] = 0; }
-
-  VertexSubset unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_F(match, approxGraph), true); // mark visited
-  VertexSubset requestedVertices = approxGraph.edgeMap(remaining_vertices, REQUEST_F(match, requests, approxGraph), true); // mark visited
-  VertexSubset respondedVertices = approxGraph.edgeMap(remaining_vertices, RESPOND_F(match, requests, approxGraph), true); // mark visited
-  VertexSubset matchedVertices = approxGraph.vertexMap(remaining_vertices, MATCH_F(match, requests, approxGraph), true); // mark visited
-
-
-
+  VertexSubset unmatchedVertices = remaining_vertices;
+  do {
+    printf("Unmatched verts\n");
+    unmatchedVertices.print();
+    unmatchedVertices = approxGraph.vertexMap(unmatchedVertices, SELECT_COLOR_F(match, approxGraph), true); // mark visited
+    printf("vert colors\n");
+    for(int64_t i = 0; i < n; i++) { if(match[i] < 2) printf("%lu %u\n", i, match[i]); }
+    printf("\n");
+    approxGraph.edgeMap(unmatchedVertices, REQUEST_F(match, requests, approxGraph), false); // mark visited
+    approxGraph.edgeMap(unmatchedVertices, RESPOND_F(match, requests, approxGraph), false); // mark visited
+    approxGraph.vertexMap(unmatchedVertices, MATCH_F(match, requests, approxGraph), false); // mark visited
+  } while(unmatchedVertices.non_empty() && ++count < NR_MAX_MATCH_ROUNDS);
+  printf("maximal matching M1\n");
+  for(int64_t i = 0; i < n; i++) { if(match[i] >= 4) printf("%lu ", i); }
+  printf("\n");
+  printf("the set O of outsiders\n");
+  for(int64_t i = 0; i < n; i++) { if(match[i] < 4) printf("%lu ", i); }
+  printf("\n");
 }
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){

@@ -1,4 +1,5 @@
-
+#define NR_MATCH_ROUNDS 20
+#define NR_MAX_MATCH_ROUNDS 256
 #define LEFTROTATE(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
 
 template <typename T, typename SM> 
@@ -7,7 +8,7 @@ struct SELECT_COLOR_F {
     const SM &G;
 	uint random;
     bool keepMatchingTBB;
-    const uint selectBarrier = 10;
+    const uint selectBarrier = 7;
 
     //Nothing-up-my-sleeve working constants from SHA-256.
     const uint32_t MD5K[64] = {0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -28,7 +29,7 @@ struct SELECT_COLOR_F {
     explicit SELECT_COLOR_F(T *_match, const SM &_G) : match(_match), G(_G) {}
     inline bool operator()(uintE i) {
         //This code should be the same as in matchgpu.cu!
-        if (match[i] >= 2) return false;
+        if (match[i] >= 2 || !G.getDegree(i)) return false;
         
         //There are still vertices to be matched.
         keepMatchingTBB = true;
