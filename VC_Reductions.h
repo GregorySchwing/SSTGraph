@@ -6,6 +6,7 @@
 #include <algorithm> // std::set_union, std::sort
 #include "Chen/Struction.h"
 #include "Chen/Dominated.h"
+#include "Chen/GeneralFold.h"
 
 // This code is part of the project "Ligra: A Lightweight Graph Processing
 // Framework for Shared Memory", presented at Principles and Practice of
@@ -497,6 +498,17 @@ class VC_Reductions {
                                           std::tuple<el_t, el_t> *edgesToInsert,
                                           int32_t &removeCounter,
                                           int32_t &insertCounter);
+
+    template <typename SM> bool GeneralFold(SM &approxGraph,
+                                            VertexSubset &remaining_vertices,
+                                            int32_t *match,
+                                            int32_t *requests,
+                                            int32_t *crowns,
+                                            int32_t b_size,
+                                            std::tuple<el_t, el_t> *edgesToRemove,
+                                            std::tuple<el_t, el_t> *edgesToInsert,
+                                            int32_t &removeCounter,
+                                            int32_t &insertCounter);
 };
 
 
@@ -534,6 +546,17 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
             performStruction,
             maxVertex,
             numStructionNeighbors,
+            b_size,
+            edgesToRemove,
+            edgesToInsert,
+            removeCounter,
+            insertCounter);
+
+  GeneralFold(approxGraph,
+            remaining_vertices,
+            numberAntiEdges,
+            performStruction,
+            maxVertex,
             b_size,
             edgesToRemove,
             edgesToInsert,
@@ -826,6 +849,31 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
   approxGraph.print_arrays();
 
   return structionPerformed;
+}
+
+
+template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
+                                                    VertexSubset &remaining_vertices,
+                                                    int32_t *match,
+                                                    int32_t *requests,
+                                                    int32_t *crowns,
+                                                    int32_t b_size,
+                                                    std::tuple<el_t, el_t> *edgesToRemove,
+                                                    std::tuple<el_t, el_t> *edgesToInsert,
+                                                    int32_t &removeCounter,
+                                                    int32_t &insertCounter){
+  bool crownFound = false;
+  int64_t n = approxGraph.get_rows(); 
+
+  parallel_for(int64_t i = 0; i < n; i++) { match[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { requests[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { crowns[i] = 0; }
+
+  VertexSubset unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_F(match, approxGraph), true); // mark visited
+  VertexSubset requestedVertices = approxGraph.edgeMap(remaining_vertices, REQUEST_F(match, requests, approxGraph), true); // mark visited
+
+
+
 }
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
