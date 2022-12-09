@@ -871,6 +871,8 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
 
   VertexSubset unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_F(match, approxGraph), true); // mark visited
   VertexSubset requestedVertices = approxGraph.edgeMap(remaining_vertices, REQUEST_F(match, requests, approxGraph), true); // mark visited
+  VertexSubset respondedVertices = approxGraph.edgeMap(remaining_vertices, RESPOND_F(match, requests, approxGraph), true); // mark visited
+  VertexSubset matchedVertices = approxGraph.vertexMap(remaining_vertices, MATCH_F(match, requests, approxGraph), true); // mark visited
 
 
 

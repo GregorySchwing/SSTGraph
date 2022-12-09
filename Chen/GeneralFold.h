@@ -131,3 +131,94 @@ template <typename T, typename SM> struct REQUEST_F {
   }
 };
 
+
+
+template <typename T, typename SM> struct RESPOND_F {
+  T *match;
+  T *requests;
+  int64_t nrVertices;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  RESPOND_F(T* _match, T* _requests, SM &_G) : 
+  match(_match),
+  requests(_requests),
+  G(_G)  {
+    nrVertices = G.get_rows(); 
+  }
+  // Assumes undirected graph
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    //Look at all red vertices.
+    if (match[d] == 1)
+    {
+        //const int2 indices = neighbourRanges[i];
+
+        //Select first available proposer.
+        //for (int j = indices.x; j < indices.y; ++j)
+        //{
+            //const int ni = neighbours[j];
+
+            //Only respond to blue neighbours.
+            if (match[s] == 0)
+            {
+                //Avoid data thrashing be only looking at the request value of blue neighbours.
+                if (requests[s] == d)
+                {
+                    requests[d] = s;
+                    //break;
+                }
+            }
+        //}
+    }
+
+    return true;
+  }
+  // ???
+  // Assumes undirected graph
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    // Assuming I am not a neighbor to myself,
+    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
+    uint32_t edgeIndex = __sync_fetch_and_add(&requests[d], (G.getDegree(d) - G.common_neighbors(s,d) - 1));
+    return true;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
+
+
+template <typename T, typename SM> 
+struct MATCH_F {
+    T *match;
+    T *requests;
+    int64_t nrVertices;
+    const SM &G;
+    explicit MATCH_F(T* _match, T* _requests, SM &_G) : 
+    match(_match),
+    requests(_requests),
+    G(_G)  {
+        nrVertices = G.get_rows(); 
+    }
+    inline bool operator()(uintE i) {
+        uintE r = requests[i];
+
+        //Only unmatched vertices make requests.
+        if (r == nrVertices + 1)
+        {
+            //This is vertex without any available neighbours, discard it.
+            match[i] = 2;
+        }
+        else if (r < nrVertices)
+        {
+            //This vertex has made a valid request.
+            if (requests[r] == i)
+            {
+                //Match the vertices if the request was mutual.
+                match[i] = 4 + min(i, r);
+            }
+        }
+        return true;
+    }
+};
