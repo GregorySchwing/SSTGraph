@@ -876,7 +876,10 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
     uint randomNumber = rand();
     unmatchedVertices = approxGraph.vertexMap(unmatchedVertices, SELECT_COLOR_F(match, approxGraph, randomNumber), true); // mark visited
     printf("vert colors\n");
-    for(int64_t i = 0; i < n; i++) { if(match[i] < 2) printf("%lu %u\n", i, match[i]); }
+    for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, match[i]); }
+    printf("\n");
+    printf("vert requests\n");
+    for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, requests[i]); }
     printf("\n");
     approxGraph.edgeMap(unmatchedVertices, REQUEST_F(match, requests, approxGraph), false); // mark visited
     approxGraph.edgeMap(unmatchedVertices, RESPOND_F(match, requests, approxGraph), false); // mark visited
