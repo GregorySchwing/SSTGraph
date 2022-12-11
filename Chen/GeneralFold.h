@@ -6,7 +6,7 @@ template <typename T, typename SM>
 struct SELECT_COLOR_F {
     T *match;
     const SM &G;
-	uint random;
+    const uint random;
     bool keepMatchingTBB;
     //const uint selectBarrier = 7;
     uint selectBarrier = 0x8000000;
@@ -27,7 +27,7 @@ struct SELECT_COLOR_F {
                     4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
                     6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21};
                 
-    explicit SELECT_COLOR_F(T *_match, const SM &_G, uint seed = 5, uint barrier = 8) : match(_match), G(_G), random(seed) {
+    explicit SELECT_COLOR_F(T *_match, const SM &_G, uint _random = 5, uint barrier = 8) : match(_match), G(_G), random(_random) {
 			const int b = max((uint)0, barrier);
       if (b >= 16) selectBarrier = 0xffffffff;
       else selectBarrier = (unsigned int)((long)b*0x10000000L);
