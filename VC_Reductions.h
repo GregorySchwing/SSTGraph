@@ -532,6 +532,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
   int32_t insertCounter = 0;
 
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
+  /*
   Dominated(approxGraph,
             remaining_vertices,
             performStruction,
@@ -551,7 +552,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
             edgesToInsert,
             removeCounter,
             insertCounter);
-
+  */
   GeneralFold(approxGraph,
             remaining_vertices,
             numberAntiEdges,

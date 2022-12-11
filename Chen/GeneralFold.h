@@ -8,7 +8,8 @@ struct SELECT_COLOR_F {
     const SM &G;
 	uint random;
     bool keepMatchingTBB;
-    const uint selectBarrier = 7;
+    //const uint selectBarrier = 7;
+    uint selectBarrier = 0x8000000;
 
     //Nothing-up-my-sleeve working constants from SHA-256.
     const uint32_t MD5K[64] = {0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -26,8 +27,15 @@ struct SELECT_COLOR_F {
                     4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
                     6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21};
                 
-    explicit SELECT_COLOR_F(T *_match, const SM &_G) : match(_match), G(_G) {}
+    explicit SELECT_COLOR_F(T *_match, const SM &_G, uint seed = 5, uint barrier = 8) : match(_match), G(_G), random(seed) {
+			const int b = max((uint)0, barrier);
+      if (b >= 16) selectBarrier = 0xffffffff;
+      else selectBarrier = (unsigned int)((long)b*0x10000000L);
+		}
+    
     inline bool operator()(uintE i) {
+        printf("called select vertex %u\n", i);
+
         //This code should be the same as in matchgpu.cu!
         if (match[i] >= 2 || !G.getDegree(i)) return false;
         
@@ -55,7 +63,7 @@ struct SELECT_COLOR_F {
 
             g *= random;
         }
-        
+        printf("vertex %u val %lu selBar %u\n", i, (h0 + h1 + h2 + h3), selectBarrier);
         match[i] = ((h0 + h1 + h2 + h3) < selectBarrier ? 0 : 1);
         return true;
     }
