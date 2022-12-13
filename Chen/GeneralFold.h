@@ -2,6 +2,49 @@
 #define NR_MAX_MATCH_ROUNDS 256
 #define LEFTROTATE(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
 
+
+template <typename T, typename SM> struct PRINT_EDGES {
+  T *numToEdgesRemove;
+  T *maxNumToEdgesRemove;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  PRINT_EDGES(T *_numToEdgesRemove, T *_maxNumToEdgesRemove, SM &_G) : 
+  maxNumToEdgesRemove(_maxNumToEdgesRemove),
+  numToEdgesRemove(_numToEdgesRemove),
+  G(_G)  {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    printf("s %u d %u\n",s, d);
+    bool deletedEdge = false;
+    /*
+    if (G.has(s,d)){
+      uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+      if (edgeIndex < *maxNumToEdgesRemove) 
+        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
+      deletedEdge = true;
+    }
+    if (G.has(d,s)){
+      uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
+      if (edgeIndex < *maxNumToEdgesRemove) 
+        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
+      deletedEdge = true;
+    }
+    */
+    return deletedEdge;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    bool deletedEdge = false;
+    printf("s %u d %u\n",s, d);
+    return deletedEdge;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
+
+
 template <typename T, typename SM> 
 struct SELECT_COLOR_F {
     T *match;
@@ -68,18 +111,51 @@ struct SELECT_COLOR_F {
         return true;
     }
 };
-
+/*
 
 template <typename T, typename SM> struct REQUEST_F {
   T *match;
   T *requests;
+  SM &G;
+
+  REQUEST_F(T* _match, T* _requests, SM &_G) : 
+  match(_match),
+  requests(_requests),
+  G(_G)
+  {}
+  // Assumes undirected graph
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    printf("s %u d %u\n", s, d);
+  }
+  // ???
+  // Assumes undirected graph
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    printf("atomic s %u d %u\n", s, d);
+    // Assuming I am not a neighbor to myself,
+    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
+    //uint32_t edgeIndex = __sync_fetch_and_add(&requests[d], (G.getDegree(d) - G.common_neighbors(s,d) - 1));
+    //return true;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
+*/
+
+/*
+template <typename T, typename SM> struct CHECK_FOR_UNMATCHED_NEIGHBOR_F {
+  T *match;
+  T *dead;
+
   int64_t nrVertices;
   // vertex* V;
   // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
   SM &G;
-  REQUEST_F(T* _match, T* _requests, SM &_G) : 
+  CHECK_FOR_UNMATCHED_NEIGHBOR_F(T* _match, T* _dead, SM &_G) : 
   match(_match),
-  requests(_requests),
+  dead(_dead),
   G(_G)  {
     nrVertices = G.get_rows(); 
   }
@@ -88,39 +164,29 @@ template <typename T, typename SM> struct REQUEST_F {
     //Look at all blue vertices and let them make requests.
     if (match[d] == 0)
     {
-        //const int2 indices = neighbourRanges[i];
-        int candidate = nrVertices;
-        int dead = 1;
-
-        //for (int j = indices.x; j < indices.y; ++j)
-        //{
-            //Only propose to red neighbours.
-            //const int ni = neighbours[j];
-            const int nm = match[s];
-            //Do we have an unmatched neighbour?
-            if (nm < 4)
+        T dead = 1;
+        //Only propose to red neighbours.
+        //const int ni = neighbours[j];
+        const int nm = match[s];
+        //Do we have an unmatched neighbour?
+        if (nm < 4)
+        {
+            //Is this neighbour red?
+            if (nm == 1)
             {
-                //Is this neighbour red?
-                if (nm == 1)
-                {
-                    //Propose to this neighbour.
-                    requests[d] = s;
-                    dead = 2;
-                    //break;
-                }
-                else
-                {
-                    dead = 0;
-                }
+                //Propose to this neighbour.
+                dead = 2;
+                // An unmatched red neighbor exists
+                //break;
             }
-        //}
+            else
+            {
+                // An unmatched blue neighbor exists
+                dead = 0;
+            }
+        }
 
-        requests[d] = candidate + dead;
-    }
-    else
-    {
-        //Clear request value.
-        requests[d] = nrVertices;
+        dead[d] = dead;
     }
 
     return true;
@@ -130,8 +196,59 @@ template <typename T, typename SM> struct REQUEST_F {
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     // Assuming I am not a neighbor to myself,
     // thus G.common_neighbors(s,d) > 0 indicates a triangle.
-    uint32_t edgeIndex = __sync_fetch_and_add(&requests[d], (G.getDegree(d) - G.common_neighbors(s,d) - 1));
+    uint32_t edgeIndex = __sync_fetch_and_add(&match[d], (G.getDegree(d) - G.common_neighbors(s,d) - 1));
     return true;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
+*/
+/*
+template <typename T, typename SM> struct REQUEST_F {
+  T *match;
+  T *requests;
+  T *dead;
+
+  int64_t nrVertices;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  REQUEST_F(T* _match, T* _requests, T* _dead, SM &_G) : 
+  match(_match),
+  requests(_requests),
+  dead(_dead),
+  G(_G)  {}
+  // Assumes undirected graph
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    printf("s %u d %u\n", s, d);
+    printf("s %u match %u d %u match %u\n", s, match[s], d, match[d]);
+    if (match[d] == 0 && match[s] < 4) {
+      /*
+      if (match[s] == 1 && dead[d] < 2){
+        // a match
+        requests[d] = s;
+        // Vertex isn't dead
+        dead[d] = 2;
+      } else if (match[s] == 0 && dead[d] == 1) {
+        // Vertex isn't dead, but not a match
+        dead[d] = 0;
+      }
+    }
+    //return true;
+    }
+  }
+  // ???
+  // Assumes undirected graph
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+        printf("atomic s %u d %u\n", s, d);
+
+    // Assuming I am not a neighbor to myself,
+    // thus G.common_neighbors(s,d) > 0 indicates a triangle.
+    //uint32_t edgeIndex = __sync_fetch_and_add(&requests[d], (G.getDegree(d) - G.common_neighbors(s,d) - 1));
+    //return true;
   }
   
   // cond function checks if vertex has non-zero degree
@@ -180,7 +297,7 @@ template <typename T, typename SM> struct RESPOND_F {
         //}
     }
 
-    return true;
+    //return true;
   }
   // ???
   // Assumes undirected graph
@@ -202,11 +319,13 @@ template <typename T, typename SM>
 struct MATCH_F {
     T *match;
     T *requests;
+    T *dead;
     int64_t nrVertices;
     const SM &G;
-    explicit MATCH_F(T* _match, T* _requests, SM &_G) : 
+    explicit MATCH_F(T* _match, T* _requests, T* _dead,SM &_G) : 
     match(_match),
     requests(_requests),
+    dead(_dead),
     G(_G)  {
         nrVertices = G.get_rows(); 
     }
@@ -214,7 +333,7 @@ struct MATCH_F {
         uintE r = requests[i];
 
         //Only unmatched vertices make requests.
-        if (r == nrVertices + 1)
+        if (dead[i])
         {
             //This is vertex without any available neighbours, discard it.
             match[i] = 2;
@@ -231,3 +350,4 @@ struct MATCH_F {
         return true;
     }
 };
+*/

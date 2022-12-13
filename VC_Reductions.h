@@ -500,15 +500,16 @@ class VC_Reductions {
                                           int32_t &insertCounter);
 
     template <typename SM> bool GeneralFold(SM &approxGraph,
-                                            VertexSubset &remaining_vertices,
-                                            int32_t *match,
-                                            int32_t *requests,
-                                            int32_t *crowns,
-                                            int32_t b_size,
-                                            std::tuple<el_t, el_t> *edgesToRemove,
-                                            std::tuple<el_t, el_t> *edgesToInsert,
-                                            int32_t &removeCounter,
-                                            int32_t &insertCounter);
+                                          VertexSubset &remaining_vertices,
+                                          int32_t *numberAntiEdges,
+                                          int32_t *performStruction,
+                                          int32_t *maxVertex,
+                                          int32_t *numStructionNeighbors,
+                                          int32_t b_size,
+                                          std::tuple<el_t, el_t> *edgesToRemove,
+                                          std::tuple<el_t, el_t> *edgesToInsert,
+                                          int32_t &removeCounter,
+                                          int32_t &insertCounter);
 };
 
 
@@ -558,6 +559,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
             numberAntiEdges,
             performStruction,
             maxVertex,
+            numStructionNeighbors,
             b_size,
             edgesToRemove,
             edgesToInsert,
@@ -855,21 +857,47 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
 
 template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
                                                     VertexSubset &remaining_vertices,
-                                                    int32_t *match,
-                                                    int32_t *requests,
-                                                    int32_t *crowns,
+                                                    int32_t *numberAntiEdges,
+                                                    int32_t *performStruction,
+                                                    int32_t *maxVertex,
+                                                    int32_t *numStructionNeighbors,
                                                     int32_t b_size,
                                                     std::tuple<el_t, el_t> *edgesToRemove,
                                                     std::tuple<el_t, el_t> *edgesToInsert,
                                                     int32_t &removeCounter,
                                                     int32_t &insertCounter){
+  int64_t n = approxGraph.get_rows(); 
+
+  parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { performStruction[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { numStructionNeighbors[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { maxVertex[i] = 0; }
+
+  uint randomNumber = rand();
+  VertexSubset unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_F(performStruction, approxGraph, randomNumber), true); // mark visited
+    printf("Unmatched verts\n");
+  unmatchedVertices.print();
+  printf("vert colors\n");
+  for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, performStruction[i]); }
+  printf("\n");
+  printf("vert requests\n");
+  for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, numStructionNeighbors[i]); }
+  printf("\n");
+  VertexSubset struction = approxGraph.edgeMap(remaining_vertices, PRINT_EDGES(numberAntiEdges, performStruction, approxGraph), true, 20);
+/*
+
+  /*
   bool crownFound = false;
   int64_t n = approxGraph.get_rows(); 
+  approxGraph.print_arrays();
   int64_t count = 0;
   parallel_for(int64_t i = 0; i < n; i++) { match[i] = 0; }
   parallel_for(int64_t i = 0; i < n; i++) { requests[i] = 0; }
   parallel_for(int64_t i = 0; i < n; i++) { crowns[i] = 0; }
-  VertexSubset unmatchedVertices = remaining_vertices;
+  parallel_for(int64_t i = 0; i < n; i++) { dead[i] = 1; }
+  VertexSubset unmatchedVertices = VertexSubset(0, n, true); // initial set contains all vertices
+
+  //VertexSubset unmatchedVertices = remaining_vertices;
   do {
     printf("Unmatched verts\n");
     unmatchedVertices.print();
@@ -881,9 +909,18 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
     printf("vert requests\n");
     for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, requests[i]); }
     printf("\n");
-    approxGraph.edgeMap(unmatchedVertices, REQUEST_F(match, requests, approxGraph), false); // mark visited
+    printf("start request\n");
+    approxGraph.edgeMap(unmatchedVertices, REQUEST_F(match, requests, approxGraph), true); // mark visited
+    printf("end request\n");
+    /*
+    printf("start respond\n");
     approxGraph.edgeMap(unmatchedVertices, RESPOND_F(match, requests, approxGraph), false); // mark visited
-    approxGraph.vertexMap(unmatchedVertices, MATCH_F(match, requests, approxGraph), false); // mark visited
+    printf("end respond\n");
+    printf("start match\n");
+    approxGraph.vertexMap(unmatchedVertices, MATCH_F(match, requests, dead, approxGraph), false); // mark visited
+    printf("end match\n");
+    */
+  /*
   } while(unmatchedVertices.non_empty() && ++count < NR_MAX_MATCH_ROUNDS);
   printf("maximal matching M1\n");
   for(int64_t i = 0; i < n; i++) { if(match[i] >= 4) printf("%lu ", i); }
@@ -891,6 +928,7 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
   printf("the set O of outsiders\n");
   for(int64_t i = 0; i < n; i++) { if(match[i] < 4) printf("%lu ", i); }
   printf("\n");
+  */
 }
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
