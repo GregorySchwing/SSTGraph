@@ -866,6 +866,7 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
                                                     std::tuple<el_t, el_t> *edgesToInsert,
                                                     int32_t &removeCounter,
                                                     int32_t &insertCounter){
+  int count = 0;
   int64_t n = approxGraph.get_rows(); 
 
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] = 0; }
@@ -874,23 +875,35 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
   parallel_for(int64_t i = 0; i < n; i++) { maxVertex[i] = 0; }
 
   uint randomNumber = rand();
-  VertexSubset unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_F(performStruction, approxGraph, randomNumber), true); // mark visited
+  VertexSubset unmatchedVertices;
+  do {
+    printf("match round %d\n", count);
+    unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_F(performStruction, approxGraph, randomNumber), true); // mark visited
+    /*
     printf("Unmatched verts\n");
-  unmatchedVertices.print();
-  printf("vert colors\n");
-  for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, performStruction[i]); }
-  printf("\n");
+    unmatchedVertices.print();
+    printf("vert colors\n");
+    for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, performStruction[i]); }
+    printf("\n");
 
-  //VertexSubset struction = approxGraph.edgeMap(remaining_vertices, PRINT_EDGES(numberAntiEdges, performStruction, approxGraph), true, 20);
-  VertexSubset struction = approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(performStruction, numberAntiEdges, approxGraph), true, 20);
-  printf("vert REQUEST after request\n");
-  for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, numberAntiEdges[i]); }
-  printf("\n");
-  VertexSubset struction2 = approxGraph.edgeMap(remaining_vertices, RESPOND_2_F(performStruction, numberAntiEdges, approxGraph), true, 20);
-  printf("vert REQUEST after respond\n");
-  for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, numberAntiEdges[i]); }
-  printf("\n");
-  unmatchedVertices = approxGraph.vertexMap(remaining_vertices, MATCH_F(performStruction, numberAntiEdges, approxGraph), true); // mark visited
+    */
+    //VertexSubset struction = approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(performStruction, numberAntiEdges, approxGraph), true, 20);
+    approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(performStruction, numberAntiEdges, approxGraph), false, 20);
+    /*
+    printf("vert REQUEST after request\n");
+    for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, numberAntiEdges[i]); }
+    printf("\n");
+    */
+    //VertexSubset struction2 = approxGraph.edgeMap(remaining_vertices, RESPOND_2_F(performStruction, numberAntiEdges, approxGraph), true, 20);
+    approxGraph.edgeMap(remaining_vertices, RESPOND_2_F(performStruction, numberAntiEdges, approxGraph), false, 20);
+
+    /*
+    printf("vert REQUEST after respond\n");
+    for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, numberAntiEdges[i]); }
+    printf("\n");
+    */
+    unmatchedVertices = approxGraph.vertexMap(remaining_vertices, MATCH_F(performStruction, numberAntiEdges, approxGraph), true); // mark visited
+  } while (unmatchedVertices.non_empty() && ++count < NR_MAX_MATCH_ROUNDS);
   printf("Unmatched verts\n");
   unmatchedVertices.print();
   printf("maximal matching M1\n");
@@ -899,49 +912,6 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
   printf("the set O of outsiders\n");
   for(int64_t i = 0; i < n; i++) { if(performStruction[i] < 4) printf("%lu ", i); }
   printf("\n");
-
-  /*
-  bool crownFound = false;
-  int64_t n = approxGraph.get_rows(); 
-  approxGraph.print_arrays();
-  int64_t count = 0;
-  parallel_for(int64_t i = 0; i < n; i++) { match[i] = 0; }
-  parallel_for(int64_t i = 0; i < n; i++) { requests[i] = 0; }
-  parallel_for(int64_t i = 0; i < n; i++) { crowns[i] = 0; }
-  parallel_for(int64_t i = 0; i < n; i++) { dead[i] = 1; }
-  VertexSubset unmatchedVertices = VertexSubset(0, n, true); // initial set contains all vertices
-
-  //VertexSubset unmatchedVertices = remaining_vertices;
-  do {
-    printf("Unmatched verts\n");
-    unmatchedVertices.print();
-    uint randomNumber = rand();
-    unmatchedVertices = approxGraph.vertexMap(unmatchedVertices, SELECT_COLOR_F(match, approxGraph, randomNumber), true); // mark visited
-    printf("vert colors\n");
-    for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, match[i]); }
-    printf("\n");
-    printf("vert requests\n");
-    for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, requests[i]); }
-    printf("\n");
-    printf("start request\n");
-    approxGraph.edgeMap(unmatchedVertices, REQUEST_F(match, requests, approxGraph), true); // mark visited
-    printf("end request\n");
-    printf("start respond\n");
-    approxGraph.edgeMap(unmatchedVertices, RESPOND_F(match, requests, approxGraph), false); // mark visited
-    printf("end respond\n");
-    printf("start match\n");
-    approxGraph.vertexMap(unmatchedVertices, MATCH_F(match, requests, dead, approxGraph), false); // mark visited
-    printf("end match\n");
-    */
-  /*
-  } while(unmatchedVertices.non_empty() && ++count < NR_MAX_MATCH_ROUNDS);
-  printf("maximal matching M1\n");
-  for(int64_t i = 0; i < n; i++) { if(match[i] >= 4) printf("%lu ", i); }
-  printf("\n");
-  printf("the set O of outsiders\n");
-  for(int64_t i = 0; i < n; i++) { if(match[i] < 4) printf("%lu ", i); }
-  printf("\n");
-  */
 }
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){

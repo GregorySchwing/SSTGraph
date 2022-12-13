@@ -237,7 +237,7 @@ struct SELECT_COLOR_F {
 
             g *= random;
         }
-        printf("vertex %u val %lu selBar %u\n", i, (h0 + h1 + h2 + h3), selectBarrier);
+        //printf("vertex %u val %lu selBar %u\n", i, (h0 + h1 + h2 + h3), selectBarrier);
         match[i] = ((h0 + h1 + h2 + h3) < selectBarrier ? 0 : 1);
         return true;
     }
