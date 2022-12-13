@@ -242,6 +242,29 @@ struct SELECT_COLOR_F {
         return true;
     }
 };
+
+
+template <typename T, typename SM> 
+struct SELECT_COLOR_AUX_F {
+    T *match;
+    T *auxMatch;
+
+    const SM &G;
+
+    explicit SELECT_COLOR_AUX_F(T *_match, T *_auxMatch, const SM &_G) : match(_match), auxMatch(_auxMatch), G(_G){}
+    
+    inline bool operator()(uintE i) {
+        //printf("called select vertex %u\n", i);
+
+        //This code should be the same as in matchgpu.cu!
+        if (!G.getDegree(i)) return false;
+        
+        //printf("vertex %u val %lu selBar %u\n", i, (h0 + h1 + h2 + h3), selectBarrier);
+        // This could be done inplace, unless the original M1 matching is needed in later steps.
+        auxMatch[i] = match[i] >= 4 ? 0 : 1;
+        return true;
+    }
+};
 /*
 
 template <typename T, typename SM> struct REQUEST_F {
