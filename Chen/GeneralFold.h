@@ -14,22 +14,22 @@ template <typename T, typename SM> struct REQUEST_2_F {
   request(_maxNumToEdgesRemove),
   G(_G)  {}
   inline bool update(uint32_t s, uint32_t d) { // Update
-    printf("s %u d %u\n",s, d);
+    //printf("s %u d %u\n",s, d);
     bool deletedEdge = false;
-    printf("s %u d %u\n", s, d);
-    printf("s %u match %u d %u match %u\n", s, match[s], d, match[d]);
+    //printf("s %u d %u\n", s, d);
+    //printf("s %u match %u d %u match %u\n", s, match[s], d, match[d]);
     //Look at all blue vertices and let them make requests.
     // match[d] == 0 : blue
     // match[s] == 1 : red
     if (match[d] == 0 && match[s] == 1){
-        // a match
-        request[d] = s;
+      // a match
+      request[d] = s;
     }
     return deletedEdge;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     bool deletedEdge = false;
-    printf("s %u d %u\n",s, d);
+    //printf("s %u d %u\n",s, d);
     // If source is red and dest is blue, 
     if (match[d] == 0 && match[s] == 1){
       // Safe for multiple vertices trying to match with d.  
@@ -158,14 +158,14 @@ template <typename T, typename SM> struct PRINT_EDGES {
   numToEdgesRemove(_numToEdgesRemove),
   G(_G)  {}
   inline bool update(uint32_t s, uint32_t d) { // Update
-    printf("s %u d %u\n",s, d);
+    //printf("s %u d %u\n",s, d);
     bool deletedEdge = false;
 
     return deletedEdge;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     bool deletedEdge = false;
-    printf("s %u d %u\n",s, d);
+    //printf("s %u d %u\n",s, d);
     return deletedEdge;
   }
   
@@ -208,7 +208,7 @@ struct SELECT_COLOR_F {
 		}
     
     inline bool operator()(uintE i) {
-        printf("called select vertex %u\n", i);
+        //printf("called select vertex %u\n", i);
 
         //This code should be the same as in matchgpu.cu!
         if (match[i] >= 2 || !G.getDegree(i)) return false;
