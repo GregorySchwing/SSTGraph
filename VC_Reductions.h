@@ -880,11 +880,25 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
   printf("vert colors\n");
   for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, performStruction[i]); }
   printf("\n");
-  printf("vert requests\n");
-  for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, numStructionNeighbors[i]); }
+
+  //VertexSubset struction = approxGraph.edgeMap(remaining_vertices, PRINT_EDGES(numberAntiEdges, performStruction, approxGraph), true, 20);
+  VertexSubset struction = approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(performStruction, numberAntiEdges, approxGraph), true, 20);
+  printf("vert REQUEST after request\n");
+  for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, numberAntiEdges[i]); }
   printf("\n");
-  VertexSubset struction = approxGraph.edgeMap(remaining_vertices, PRINT_EDGES(numberAntiEdges, performStruction, approxGraph), true, 20);
-/*
+  VertexSubset struction2 = approxGraph.edgeMap(remaining_vertices, RESPOND_2_F(performStruction, numberAntiEdges, approxGraph), true, 20);
+  printf("vert REQUEST after respond\n");
+  for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, numberAntiEdges[i]); }
+  printf("\n");
+  unmatchedVertices = approxGraph.vertexMap(remaining_vertices, MATCH_F(performStruction, numberAntiEdges, approxGraph), true); // mark visited
+  printf("Unmatched verts\n");
+  unmatchedVertices.print();
+  printf("maximal matching M1\n");
+  for(int64_t i = 0; i < n; i++) { if(performStruction[i] >= 4) printf("%lu ", i); }
+  printf("\n");
+  printf("the set O of outsiders\n");
+  for(int64_t i = 0; i < n; i++) { if(performStruction[i] < 4) printf("%lu ", i); }
+  printf("\n");
 
   /*
   bool crownFound = false;
@@ -912,7 +926,6 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
     printf("start request\n");
     approxGraph.edgeMap(unmatchedVertices, REQUEST_F(match, requests, approxGraph), true); // mark visited
     printf("end request\n");
-    /*
     printf("start respond\n");
     approxGraph.edgeMap(unmatchedVertices, RESPOND_F(match, requests, approxGraph), false); // mark visited
     printf("end respond\n");

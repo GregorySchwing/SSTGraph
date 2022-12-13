@@ -2,6 +2,150 @@
 #define NR_MAX_MATCH_ROUNDS 256
 #define LEFTROTATE(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
 
+    
+template <typename T, typename SM> struct REQUEST_2_F {
+  T *match;
+  T *request;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  REQUEST_2_F(T *_numToEdgesRemove, T *_maxNumToEdgesRemove, SM &_G) : 
+  match(_numToEdgesRemove),
+  request(_maxNumToEdgesRemove),
+  G(_G)  {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    printf("s %u d %u\n",s, d);
+    bool deletedEdge = false;
+    printf("s %u d %u\n", s, d);
+    printf("s %u match %u d %u match %u\n", s, match[s], d, match[d]);
+    //Look at all blue vertices and let them make requests.
+    // match[d] == 0 : blue
+    // match[s] == 1 : red
+    if (match[d] == 0 && match[s] == 1){
+        // a match
+        request[d] = s;
+    }
+    return deletedEdge;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    bool deletedEdge = false;
+    printf("s %u d %u\n",s, d);
+    // If source is red and dest is blue, 
+    if (match[d] == 0 && match[s] == 1){
+      // Safe for multiple vertices trying to match with d.  
+      // only the first will see match[d] == 0, and swap it's value with s. 
+      //deletedEdge = CAS(&request[d], (T)0, (T)s);
+      // not sure this is neccessary since a race condition of who wins the 
+      // matching isn't neccessary a problem.
+      request[d] = s;
+    }
+    return deletedEdge;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
+
+
+template <typename T, typename SM> struct RESPOND_2_F {
+  T *match;
+  T *request;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  RESPOND_2_F(T *_numToEdgesRemove, T *_maxNumToEdgesRemove, SM &_G) : 
+  match(_numToEdgesRemove),
+  request(_maxNumToEdgesRemove),
+  G(_G)  {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    bool deletedEdge = false;
+    //Look at all red vertices.
+    //Only respond to blue neighbours.
+    if (match[d] == 1 && match[s] == 0)
+    {
+      //Avoid data thrashing be only looking at the request value of blue neighbours.
+      if (request[s] == d)
+      {
+          request[d] = s;
+          //break;
+      }
+    }
+    return deletedEdge;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    bool deletedEdge = false;    
+    //Look at all red vertices.
+    //Only respond to blue neighbours.
+    if (match[d] == 1 && match[s] == 0)
+    {
+      //Avoid data thrashing be only looking at the request value of blue neighbours.
+      if (request[s] == d)
+      {
+          request[d] = s;
+          //break;
+      }
+    }
+    return deletedEdge;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
+
+
+template <typename T, typename SM> struct MATCH_2_F {
+  T *match;
+  T *request;  
+  int64_t nrVertices;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  MATCH_2_F(T *_numToEdgesRemove, T *_maxNumToEdgesRemove, SM &_G) : 
+  match(_numToEdgesRemove),
+  request(_maxNumToEdgesRemove),
+  G(_G)  {    
+    nrVertices = G.get_rows(); 
+  }
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    bool deletedEdge = false;
+    //Look at all red vertices.
+    //Only respond to blue neighbours.
+    if (match[d] == 1 && match[s] == 0)
+    {
+      //Avoid data thrashing be only looking at the request value of blue neighbours.
+      if (request[s] == d)
+      {
+          request[d] = s;
+          //break;
+      }
+    }
+    return deletedEdge;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    bool deletedEdge = false;    
+    //Look at all red vertices.
+    //Only respond to blue neighbours.
+    if (match[d] == 1 && match[s] == 0)
+    {
+      //Avoid data thrashing be only looking at the request value of blue neighbours.
+      if (request[s] == d)
+      {
+          request[d] = s;
+          //break;
+      }
+    }
+    return deletedEdge;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
 
 template <typename T, typename SM> struct PRINT_EDGES {
   T *numToEdgesRemove;
@@ -16,20 +160,7 @@ template <typename T, typename SM> struct PRINT_EDGES {
   inline bool update(uint32_t s, uint32_t d) { // Update
     printf("s %u d %u\n",s, d);
     bool deletedEdge = false;
-    /*
-    if (G.has(s,d)){
-      uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
-      if (edgeIndex < *maxNumToEdgesRemove) 
-        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{s, d};
-      deletedEdge = true;
-    }
-    if (G.has(d,s)){
-      uint32_t edgeIndex = __sync_fetch_and_add(numToEdgesRemove, 1);
-      if (edgeIndex < *maxNumToEdgesRemove) 
-        edgesToRemove[edgeIndex] = std::tuple<el_t, el_t>{d, s};
-      deletedEdge = true;
-    }
-    */
+
     return deletedEdge;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
@@ -313,41 +444,35 @@ template <typename T, typename SM> struct RESPOND_F {
     return true;
   }
 };
-
+*/
 
 template <typename T, typename SM> 
 struct MATCH_F {
     T *match;
     T *requests;
-    T *dead;
     int64_t nrVertices;
     const SM &G;
-    explicit MATCH_F(T* _match, T* _requests, T* _dead,SM &_G) : 
+    explicit MATCH_F(T* _match, T* _requests, SM &_G) : 
     match(_match),
     requests(_requests),
-    dead(_dead),
     G(_G)  {
         nrVertices = G.get_rows(); 
     }
     inline bool operator()(uintE i) {
+        bool unmatched = true;
         uintE r = requests[i];
 
         //Only unmatched vertices make requests.
-        if (dead[i])
-        {
-            //This is vertex without any available neighbours, discard it.
-            match[i] = 2;
-        }
-        else if (r < nrVertices)
+        if (r < nrVertices)
         {
             //This vertex has made a valid request.
             if (requests[r] == i)
             {
                 //Match the vertices if the request was mutual.
                 match[i] = 4 + min(i, r);
+                unmatched = false;
             }
         }
-        return true;
+        return unmatched;
     }
 };
-*/
