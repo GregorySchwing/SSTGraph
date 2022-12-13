@@ -510,6 +510,11 @@ class VC_Reductions {
                                           std::tuple<el_t, el_t> *edgesToInsert,
                                           int32_t &removeCounter,
                                           int32_t &insertCounter);
+
+template <typename SM> bool Match(SM &approxGraph,
+                                  VertexSubset &remaining_vertices,
+                                  int32_t *request,
+                                  int32_t *match);
 };
 
 
@@ -867,18 +872,40 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
                                                     std::tuple<el_t, el_t> *edgesToInsert,
                                                     int32_t &removeCounter,
                                                     int32_t &insertCounter){
+    
+  int64_t n = approxGraph.get_rows(); 
+
+  parallel_for(int64_t i = 0; i < n; i++) { auxMatch[i] = 0; }
+  Match(approxGraph,
+        remaining_vertices,
+        request,
+        match);
+  printf("maximal matching M1\n");
+  for(int64_t i = 0; i < n; i++) { if(match[i] >= 4) printf("%lu ", i); }
+  printf("\n");
+  printf("the set O of outsiders\n");
+  for(int64_t i = 0; i < n; i++) { if(match[i] < 4) printf("%lu ", i); }
+  printf("\n");
+}
+
+
+template <typename SM> bool VC_Reductions::Match(SM &approxGraph,
+                                                    VertexSubset &remaining_vertices,
+                                                    int32_t *request,
+                                                    int32_t *match){
   int count = 0;
+  int UL = 256;
+
   int64_t n = approxGraph.get_rows(); 
 
   parallel_for(int64_t i = 0; i < n; i++) { match[i] = 0; }
-  parallel_for(int64_t i = 0; i < n; i++) { auxMatch[i] = 0; }
 
   //parallel_for(int64_t i = 0; i < n; i++) { numStructionNeighbors[i] = 0; }
 
   uint randomNumber = rand();
   VertexSubset unmatchedVertices;
   do {
-    parallel_for(int64_t i = 0; i < n; i++) { request[i] = 0; }
+    parallel_for(int64_t i = 0; i < n; i++) { request[i] = n; }
     printf("match round %d\n", count);
     unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_F(match, approxGraph, randomNumber), true); // mark visited
     /*
@@ -905,15 +932,16 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
     printf("\n");
     */
     unmatchedVertices = approxGraph.vertexMap(remaining_vertices, MATCH_F(match, request, approxGraph), true); // mark visited
-  } while (unmatchedVertices.non_empty() && ++count < NR_MAX_MATCH_ROUNDS);
+  } while (unmatchedVertices.non_empty() && ++count < UL);
   printf("Unmatched verts\n");
-  unmatchedVertices.print();
-  printf("maximal matching M1\n");
-  for(int64_t i = 0; i < n; i++) { if(match[i] >= 4) printf("%lu ", i); }
+  unmatchedVertices.print();  
+  printf("vert requests\n");
+  for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, request[i]); }
   printf("\n");
-  printf("the set O of outsiders\n");
-  for(int64_t i = 0; i < n; i++) { if(match[i] < 4) printf("%lu ", i); }
+  printf("vert colors\n");
+  for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, match[i]); }
   printf("\n");
+  return true;
 }
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
