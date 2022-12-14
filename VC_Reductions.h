@@ -521,6 +521,13 @@ template <typename SM> bool AuxilliaryMatch(SM &approxGraph,
                                   int32_t *request,
                                   int32_t *match,
                                   int32_t *auxMatch);
+
+template <typename SM> bool FindCrown(SM &approxGraph,
+                                      VertexSubset &remaining_vertices,
+                                      int32_t *request,
+                                      int32_t *match,
+                                      int32_t *auxMatch,
+                                      int32_t *H_n);
 };
 
 
@@ -904,38 +911,13 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
   printf("the set of vertices unmatched by M2\n");
   for(int64_t i = 0; i < n; i++) { if(auxMatch[i] < 4) printf("%lu ", i); }
   printf("\n");
-
-  parallel_for(int64_t i = 0; i < n; i++) { H_n[i] = 0; }
-  parallel_for(int64_t i = 0; i < n; i++) { request[i] = 0; }
-  //parallel_for(int64_t i = 0; i < n; i++) { auxMatch[i] = auxMatch[i] == 1; }
-  //VertexSubset struction = approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(match, request, approxGraph), true, 20);
-  printf("I_0\n");
-  for(int64_t i = 0; i < n; i++) { if(auxMatch[i] == 1) printf("%lu ", i); }
-  printf("\n");
-  bool I_N_expanded = false;
-  do {
-    // Step 5a
-    approxGraph.edgeMap(remaining_vertices, SET_NEIGHBORS_OF_UNMATCHED_O_F(auxMatch, H_n, approxGraph), false, 20);
-    printf("Hn\n");
-    for(int64_t i = 0; i < n; i++) { if(H_n[i]) printf("%lu ", i); }
-    printf("\n");
-    // Set NM2(Hn).
-    approxGraph.edgeMap(remaining_vertices, SET_NEIGHBORS_WITHIN_AUX_MATCHING_F(auxMatch, H_n, request, approxGraph), false, 20);
-    printf("NM2(Hn)\n");
-    for(int64_t i = 0; i < n; i++) { if(request[i]) printf("%lu ", i); }
-    printf("\n");
-    // Step 5b
-    // Repeat steps 5a and 5b until n = N so that In-1 = In.
-    // In-1 = In; means no expansion happened.
-    // N iterations should be the upper limit.
-    I_N_expanded = false;
-    for(int64_t i = 0; i < n; i++) { 
-      if (auxMatch[i] != 1 && request[i] == 1){
-        I_N_expanded = true;
-        auxMatch[i] = 1;
-      }
-    }
-  } while (I_N_expanded && ++count < n);
+  bool c = FindCrown(approxGraph,
+                    remaining_vertices,
+                    request,
+                    match,
+                    auxMatch,
+                    H_n);
+  printf("Exited do while loop\n");
   printf("H\n");
   for(int64_t i = 0; i < n; i++) { if(H_n[i]) printf("%lu ", i); }
   printf("\n");
@@ -1058,6 +1040,55 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
   for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, auxMatch[i]); }
   printf("\n");
   */
+  return true;
+}
+
+
+template <typename SM> bool VC_Reductions::FindCrown(SM &approxGraph,
+                                                    VertexSubset &remaining_vertices,
+                                                    int32_t *request,
+                                                    int32_t *match,
+                                                    int32_t *auxMatch,
+                                                    int32_t *H_n){
+  int count = 0;
+  int UL = 256;
+
+  int64_t n = approxGraph.get_rows(); 
+
+
+  parallel_for(int64_t i = 0; i < n; i++) { H_n[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { request[i] = 0; }
+  //parallel_for(int64_t i = 0; i < n; i++) { auxMatch[i] = auxMatch[i] == 1; }
+  //VertexSubset struction = approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(match, request, approxGraph), true, 20);
+  printf("I_0\n");
+  for(int64_t i = 0; i < n; i++) { if(auxMatch[i] == 1) printf("%lu ", i); }
+  printf("\n");
+  bool I_N_expanded = false;
+  do {
+    // Step 5a
+    approxGraph.edgeMap(remaining_vertices, SET_NEIGHBORS_OF_UNMATCHED_O_F(auxMatch, H_n, approxGraph), false, 20);
+    printf("Hn\n");
+    for(int64_t i = 0; i < n; i++) { if(H_n[i]) printf("%lu ", i); }
+    printf("\n");
+    // Set NM2(Hn).
+    approxGraph.edgeMap(remaining_vertices, SET_NEIGHBORS_WITHIN_AUX_MATCHING_F(auxMatch, H_n, request, approxGraph), false, 20);
+    printf("NM2(Hn)\n");
+    for(int64_t i = 0; i < n; i++) { if(request[i]) printf("%lu ", i); }
+    printf("\n");
+    // Step 5b
+    // Repeat steps 5a and 5b until n = N so that In-1 = In.
+    // In-1 = In; means no expansion happened.
+    // N iterations should be the upper limit.
+    I_N_expanded = false;
+    for(int64_t i = 0; i < n; i++) { 
+      if (auxMatch[i] != 1 && request[i] == 1){
+        I_N_expanded = true;
+        auxMatch[i] = 1;
+      }
+    }
+  } while (I_N_expanded && ++count < n);
+
+
   return true;
 }
 
