@@ -872,7 +872,7 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
                                                     int32_t *request,
                                                     int32_t *match,
                                                     int32_t *auxMatch,
-                                                    int32_t *numStructionNeighbors,
+                                                    int32_t *H_n,
                                                     int32_t b_size,
                                                     std::tuple<el_t, el_t> *edgesToRemove,
                                                     std::tuple<el_t, el_t> *edgesToInsert,
@@ -880,6 +880,7 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
                                                     int32_t &insertCounter){
     
   int64_t n = approxGraph.get_rows(); 
+  int64_t count = 0; 
 
   parallel_for(int64_t i = 0; i < n; i++) { auxMatch[i] = 0; }
   Match(approxGraph,
@@ -904,6 +905,34 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
   for(int64_t i = 0; i < n; i++) { if(auxMatch[i] < 4) printf("%lu ", i); }
   printf("\n");
 
+  parallel_for(int64_t i = 0; i < n; i++) { H_n[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { request[i] = 0; }
+  //parallel_for(int64_t i = 0; i < n; i++) { auxMatch[i] = auxMatch[i] == 1; }
+  //VertexSubset struction = approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(match, request, approxGraph), true, 20);
+  bool I_N_expanded = false;
+  do {
+    // Step 5a
+    approxGraph.edgeMap(remaining_vertices, SET_NEIGHBORS_OF_UNMATCHED_O_F(auxMatch, H_n, approxGraph), false, 20);
+    // Set NM2(Hn).
+    approxGraph.edgeMap(remaining_vertices, SET_NEIGHBORS_WITHIN_MATCHING_F(match, H_n, request, approxGraph), false, 20);
+    // Step 5b
+    // Repeat steps 5a and 5b until n = N so that In-1 = In.
+    // In-1 = In; means no expansion happened.
+    // N iterations should be the upper limit.
+    I_N_expanded = false;
+    for(int64_t i = 0; i < n; i++) { 
+      if (auxMatch[i] != 1 && request[i] == 1){
+        I_N_expanded = true;
+        auxMatch[i] = 1;
+      }
+    }
+  } while (I_N_expanded && ++count < n);
+  printf("H\n");
+  for(int64_t i = 0; i < n; i++) { if(H_n[i]) printf("%lu ", i); }
+  printf("\n");
+  printf("C\n");
+  for(int64_t i = 0; i < n; i++) { if(auxMatch[i] == 1) printf("%lu ", i); }
+  printf("\n");
 }
 
 
