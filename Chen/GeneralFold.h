@@ -252,21 +252,23 @@ template <typename T, typename SM> struct SET_NEIGHBORS_OF_UNMATCHED_O_F {
 };
 
 
-template <typename T, typename SM> struct SET_NEIGHBORS_WITHIN_MATCHING_F {
+template <typename T, typename SM> struct SET_NEIGHBORS_WITHIN_AUX_MATCHING_F {
   T *match;
   T *H_n;
   T *NM2HN;
   // vertex* V;
   // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
   SM &G;
-  SET_NEIGHBORS_WITHIN_MATCHING_F(T *_numToEdgesRemove, T *_maxNumToEdgesRemove, T *_maxNumToEdgesRemove2, SM &_G) : 
+  SET_NEIGHBORS_WITHIN_AUX_MATCHING_F(T *_numToEdgesRemove, T *_maxNumToEdgesRemove, T *_maxNumToEdgesRemove2, SM &_G) : 
   match(_numToEdgesRemove),
   H_n(_maxNumToEdgesRemove),
   NM2HN(_maxNumToEdgesRemove2),
   G(_G)  {}
   inline bool update(uint32_t s, uint32_t d) { // Update
     bool deletedEdge = false;
-    if (H_n[s] && match[d] >= 4)
+    //if N(Hn) and Hn need to be disjoint
+    //if (H_n[s] && match[d] >= 4)
+    if (H_n[s] && match[d] >= 4 && !H_n[d])
     {
       NM2HN[d] = 1;
     }
@@ -274,7 +276,9 @@ template <typename T, typename SM> struct SET_NEIGHBORS_WITHIN_MATCHING_F {
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     bool deletedEdge = false;    
-    if (H_n[s] && match[d] >= 4)
+    //if N(Hn) and Hn need to be disjoint
+    //if (H_n[s] && match[d] >= 4)
+    if (H_n[s] && match[d] >= 4 && !H_n[d])
     {
       NM2HN[d] = 1;
     }
