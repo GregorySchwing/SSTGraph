@@ -224,9 +224,85 @@ struct SELECT_COLOR_AUX_F {
         
         //printf("vertex %u val %lu selBar %u\n", i, (h0 + h1 + h2 + h3), selectBarrier);
         // This could be done inplace, unless the original M1 matching is needed in later steps.
-        auxMatch[i] = match[i] >= 4 ? 0 : 1;
-        return true;
+        // Matched vertices (contained in N(O)) are already set 0
+        // unmatched vertices (O) are set 1
+        if(match[i] < 4){
+          auxMatch[i] =  1;
+          return true;
+        } else if (!auxMatch[i]){
+          return true;
+        }
+        return false;
     }
+};
+
+
+template <typename T, typename SM> 
+struct GET_UNMATCHED_N_O {
+    T *auxMatch;
+    const SM &G;
+
+    explicit GET_UNMATCHED_N_O(T *_auxMatch, const SM &_G) : auxMatch(_auxMatch), G(_G){}
+    
+    inline bool operator()(uintE i) {
+        //printf("called select vertex %u\n", i);
+
+        //This code should be the same as in matchgpu.cu!
+        if (!G.getDegree(i)) return false;
+        
+        //printf("vertex %u val %lu selBar %u\n", i, (h0 + h1 + h2 + h3), selectBarrier);
+        // This could be done inplace, unless the original M1 matching is needed in later steps.
+        // Matched vertices (contained in N(O)) are already set 0
+        // unmatched vertices (O) are set 1
+
+        // This can only be called on the VSubset from the auxmatch loop
+        return !auxMatch[i];
+    }
+};
+
+template <typename T, typename SM> struct SELECT_COLOR_AUX_N_O_F {
+  T *match;
+  T *auxMatch;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  SELECT_COLOR_AUX_N_O_F(T *_match, T *_auxMatch, SM &_G) : 
+  match(_match),
+  auxMatch(_auxMatch),
+  G(_G)  {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    bool deletedEdge = false;
+    //if I'm not in O
+    //if (match[d] >= 4)
+    //if my neighbor is in O
+    //if (match[s] < 4)
+    if (match[d] >= 4 && match[s] < 4)
+    {
+      // I'm a neighbor of an outsider.  This is a subset of M1.
+      // In the future I could let M1 be a vsubset then subset that ss.
+      auxMatch[d] = 0;
+    }
+    return deletedEdge;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    bool deletedEdge = false;
+    //if I'm not in O
+    //if (match[d] >= 4)
+    //if my neighbor is in O
+    //if (match[s] < 4)
+    if (match[d] >= 4 && match[s] < 4)
+    {
+      // I'm a neighbor of an outsider.  This is a subset of M1.
+      // In the future I could let M1 be a vsubset then subset that ss.
+      auxMatch[d] = 1;
+    }
+    return deletedEdge;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
 };
 
 template <typename T, typename SM> 

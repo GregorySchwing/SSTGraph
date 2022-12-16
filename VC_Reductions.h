@@ -1047,9 +1047,14 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
     */
     unmatchedVertices = approxGraph.vertexMap(remaining_vertices, MATCH_F(auxMatch, request, approxGraph), true); // mark visited
   } while (unmatchedVertices.non_empty() && ++count < UL);
+
+  VertexSubset unmatched_N_O = approxGraph.vertexMap(unmatchedVertices, GET_UNMATCHED_N_O(auxMatch, approxGraph), true); // mark visited
+  
   printf("Unmatched verts\n");
   unmatchedVertices.print();  
-  if (!unmatchedVertices.non_empty())
+  printf("unmatched_N_O verts\n");
+  unmatched_N_O.print(); 
+  if (!unmatched_N_O.non_empty())
     printf("Identified a crown!\n");
   /*
   printf("vert requests\n");
