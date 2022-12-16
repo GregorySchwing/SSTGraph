@@ -1064,7 +1064,7 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
   for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, auxMatch[i]); }
   printf("\n");
   */
-  return true;
+  return !unmatched_N_O.non_empty();
 }
 
 
