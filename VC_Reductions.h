@@ -514,13 +514,15 @@ class VC_Reductions {
 template <typename SM> bool Match(SM &approxGraph,
                                   VertexSubset &remaining_vertices,
                                   int32_t *request,
-                                  int32_t *match);
+                                  int32_t *match,
+                                  int32_t *maxDegree);
 
 template <typename SM> bool AuxilliaryMatch(SM &approxGraph,
                                   VertexSubset &remaining_vertices,
                                   int32_t *request,
                                   int32_t *match,
-                                  int32_t *auxMatch);
+                                  int32_t *auxMatch,
+                                  int32_t *maxDegree);
 
 template <typename SM> bool FindCrown(SM &approxGraph,
                                       VertexSubset &remaining_vertices,
@@ -890,10 +892,13 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
   int64_t count = 0; 
 
   parallel_for(int64_t i = 0; i < n; i++) { auxMatch[i] = 0; }
+  parallel_for(int64_t i = 0; i < n; i++) { H_n[i] = 0; }
+
   Match(approxGraph,
         remaining_vertices,
         request,
-        match);
+        match,
+        H_n);
   printf("maximal matching M1\n");
   for(int64_t i = 0; i < n; i++) { if(match[i] >= 4) printf("%lu ", i); }
   printf("\n");
@@ -904,7 +909,8 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
                   remaining_vertices,
                   request,
                   match,
-                  auxMatch);
+                  auxMatch,
+                  H_n);
   printf("maximal matching M2\n");
   for(int64_t i = 0; i < n; i++) { if(auxMatch[i] >= 4) printf("%lu ", i); }
   printf("\n");
@@ -930,7 +936,8 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
 template <typename SM> bool VC_Reductions::Match(SM &approxGraph,
                                                     VertexSubset &remaining_vertices,
                                                     int32_t *request,
-                                                    int32_t *match){
+                                                    int32_t *match,
+                                                    int32_t *maxDegree){
   int count = 0;
   int UL = 256;
 
@@ -940,10 +947,12 @@ template <typename SM> bool VC_Reductions::Match(SM &approxGraph,
 
   //parallel_for(int64_t i = 0; i < n; i++) { numStructionNeighbors[i] = 0; }
 
-  uint randomNumber = rand();
   VertexSubset unmatchedVertices;
   do {
+    uint randomNumber = rand();
     parallel_for(int64_t i = 0; i < n; i++) { request[i] = n; }
+    parallel_for(int64_t i = 0; i < n; i++) { maxDegree[i] = INT32_MAX; }
+
     //printf("match round %d\n", count);
     unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_F(match, approxGraph, randomNumber), true); // mark visited
     /*
@@ -954,8 +963,11 @@ template <typename SM> bool VC_Reductions::Match(SM &approxGraph,
     printf("\n");
 
     */
+
+    approxGraph.edgeMap(remaining_vertices, GET_MIN_DEGREE_F(match, maxDegree, approxGraph), false, 20);
+
     //VertexSubset struction = approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(match, request, approxGraph), true, 20);
-    approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(match, request, approxGraph), false, 20);
+    approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(match, request, maxDegree, approxGraph), false, 20);
     /*
     printf("vert REQUEST after request\n");
     for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, request[i]); }
@@ -989,7 +1001,8 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
                                                     VertexSubset &remaining_vertices,
                                                     int32_t *request,
                                                     int32_t *match,
-                                                    int32_t *auxMatch){
+                                                    int32_t *auxMatch,
+                                                    int32_t *maxDegree){
   int count = 0;
   int UL = 256;
 
@@ -1003,6 +1016,8 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
   VertexSubset unmatchedVertices;
   do {
     parallel_for(int64_t i = 0; i < n; i++) { request[i] = n; }
+    parallel_for(int64_t i = 0; i < n; i++) { maxDegree[i] = INT32_MAX; }
+
     //printf("match round %d\n", count);
     unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_AUX_F(match, auxMatch, approxGraph), true); // mark visited
     /*
@@ -1011,10 +1026,10 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
     printf("vert colors\n");
     for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, match[i]); }
     printf("\n");
-
     */
+      approxGraph.edgeMap(remaining_vertices, GET_MIN_DEGREE_F(match, maxDegree, approxGraph), false, 20);
     //VertexSubset struction = approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(match, request, approxGraph), true, 20);
-    approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(auxMatch, request, approxGraph), false, 20);
+    approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(auxMatch, request, maxDegree, approxGraph), false, 20);
     /*
     printf("vert REQUEST after request\n");
     for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, request[i]); }
