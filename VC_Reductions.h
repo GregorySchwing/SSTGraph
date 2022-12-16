@@ -1012,9 +1012,10 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
 
   //parallel_for(int64_t i = 0; i < n; i++) { numStructionNeighbors[i] = 0; }
 
-  uint randomNumber = rand();
   VertexSubset unmatchedVertices;
   do {
+    uint randomNumber = rand();
+
     parallel_for(int64_t i = 0; i < n; i++) { request[i] = n; }
     parallel_for(int64_t i = 0; i < n; i++) { maxDegree[i] = INT32_MAX; }
 
@@ -1027,7 +1028,7 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
     for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, match[i]); }
     printf("\n");
     */
-      approxGraph.edgeMap(remaining_vertices, GET_MIN_DEGREE_F(match, maxDegree, approxGraph), false, 20);
+    approxGraph.edgeMap(remaining_vertices, GET_MIN_DEGREE_F(auxMatch, maxDegree, approxGraph), false, 20);
     //VertexSubset struction = approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(match, request, approxGraph), true, 20);
     approxGraph.edgeMap(remaining_vertices, REQUEST_2_F(auxMatch, request, maxDegree, approxGraph), false, 20);
     /*
