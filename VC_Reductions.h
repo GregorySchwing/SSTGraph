@@ -1013,14 +1013,15 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
   //parallel_for(int64_t i = 0; i < n; i++) { numStructionNeighbors[i] = 0; }
 
   VertexSubset unmatchedVertices;
+
+  //printf("match round %d\n", count);
+  unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_AUX_F(match, auxMatch, approxGraph), true); // mark visited
   do {
     uint randomNumber = rand();
 
     parallel_for(int64_t i = 0; i < n; i++) { request[i] = n; }
     parallel_for(int64_t i = 0; i < n; i++) { maxDegree[i] = INT32_MAX; }
 
-    //printf("match round %d\n", count);
-    unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_AUX_F(match, auxMatch, approxGraph), true); // mark visited
     /*
     printf("Unmatched verts\n");
     unmatchedVertices.print();
