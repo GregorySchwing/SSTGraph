@@ -905,12 +905,13 @@ template <typename SM> bool VC_Reductions::GeneralFold(SM &approxGraph,
   printf("the set O of outsiders\n");
   for(int64_t i = 0; i < n; i++) { if(match[i] < 4) printf("%lu ", i); }
   printf("\n");
-  AuxilliaryMatch(approxGraph,
+  bool step3Crown = AuxilliaryMatch(approxGraph,
                   remaining_vertices,
                   request,
                   match,
                   auxMatch,
                   H_n);
+
   printf("maximal matching M2\n");
   for(int64_t i = 0; i < n; i++) { if(auxMatch[i] >= 4 && auxMatch[i] != n) printf("%lu ", i); }
   printf("\n");
@@ -1014,8 +1015,12 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
 
   //printf("match round %d\n", count);
   approxGraph.edgeMap(remaining_vertices, SELECT_COLOR_AUX_N_O_F(match, auxMatch, approxGraph), false, 20); // mark visited
+
   // UMV only consists of O and N(O)
   unmatchedVertices = approxGraph.vertexMap(remaining_vertices, SELECT_COLOR_AUX_F(match, auxMatch, approxGraph), true); // mark visited
+  // Just for printing later.
+  VertexSubset N_O = approxGraph.vertexMap(unmatchedVertices, GET_UNMATCHED_N_O(auxMatch, approxGraph), true); // mark visited
+
   do {
     uint randomNumber = rand();
 
@@ -1049,13 +1054,16 @@ template <typename SM> bool VC_Reductions::AuxilliaryMatch(SM &approxGraph,
   } while (unmatchedVertices.non_empty() && ++count < UL);
 
   VertexSubset unmatched_N_O = approxGraph.vertexMap(unmatchedVertices, GET_UNMATCHED_N_O(auxMatch, approxGraph), true); // mark visited
-  
+
   printf("Unmatched verts\n");
   unmatchedVertices.print();  
   printf("unmatched_N_O verts\n");
   unmatched_N_O.print(); 
-  if (!unmatched_N_O.non_empty())
+  if (!unmatched_N_O.non_empty()){
     printf("Identified a crown!\n");
+    printf("Neighbors of O\n");
+    N_O.print();
+  }
   /*
   printf("vert requests\n");
   for(int64_t i = 0; i < n; i++) { printf("%lu %u\n", i, request[i]); }
