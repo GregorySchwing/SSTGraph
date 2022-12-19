@@ -92,6 +92,53 @@ template <typename T, typename SM> struct REQUEST_2_F {
 };
 
 
+template <typename T, typename SM> struct REQUEST_3_F {
+  T *match;
+  T *request;
+  T *maxDegree;
+  // vertex* V;
+  // PR_F(double* _p_curr, double* _p_next, vertex* _V) :
+  SM &G;
+  REQUEST_3_F(T *_numToEdgesRemove, T *_maxNumToEdgesRemove, T *_maxDegree, SM &_G) : 
+  match(_numToEdgesRemove),
+  request(_maxNumToEdgesRemove),
+  maxDegree(_maxDegree),
+  G(_G)  {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    //printf("s %u d %u\n",s, d);
+    bool deletedEdge = false;
+    //printf("s %u d %u\n", s, d);
+    //printf("s %u match %u d %u match %u\n", s, match[s], d, match[d]);
+    //Look at all blue vertices and let them make requests.
+    // match[d] == 0 : blue
+    // match[s] == 1 : red
+    if (match[d] == 0 && match[s] == 1){
+      // a match
+      request[d] = s;
+    }
+    return deletedEdge;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    bool deletedEdge = false;
+    //printf("s %u d %u\n",s, d);
+    // If source is red and dest is blue, 
+    if (match[d] == 0 && match[s] == 1){
+      // Safe for multiple vertices trying to match with d.  
+      // only the first will see match[d] == 0, and swap it's value with s. 
+      //deletedEdge = CAS(&request[d], (T)0, (T)s);
+      // not sure this is neccessary since a race condition of who wins the 
+      // matching isn't neccessary a problem.
+      request[d] = s;
+    }
+    return deletedEdge;
+  }
+  
+  // cond function checks if vertex has non-zero degree
+  inline bool cond(uint32_t d) {
+    return true;
+  }
+};
+
 template <typename T, typename SM> struct RESPOND_2_F {
   T *match;
   T *request;
