@@ -197,6 +197,7 @@ template <typename SM> int32_t *VC_BnB_with_edge_map(SM &G) {
   int32_t *solution = (int32_t *)malloc(n * sizeof(int32_t));
   int32_t * approxSolution = vcr.RemoveMaxApproximateMVC(G);
   int32_t * approxChenSolution = vcr.ChenRemoveMaxApproximateMVC(G);
+
   return approxSolution;
   
   // Prevent terminal input messing up progress bar display

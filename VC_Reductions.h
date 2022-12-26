@@ -7,6 +7,8 @@
 #include "Chen/Struction.h"
 #include "Chen/Dominated.h"
 #include "Chen/GeneralFold.h"
+#include "Chen/Match.h"
+#include "Chen/MaximumMatching.h"
 
 // This code is part of the project "Ligra: A Lightweight Graph Processing
 // Framework for Shared Memory", presented at Principles and Practice of
@@ -533,10 +535,14 @@ template <typename SM> bool FindCrown(SM &approxGraph,
 };
 
 
+
+
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
 template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G){
   SparseMatrixV<true, bool> approxGraph(G);
   int64_t n = approxGraph.get_rows(); 
+  int64_t e = approxGraph.get_cols(); 
+
   int32_t *solution = (int32_t *)malloc(n * sizeof(int32_t));
 
   parallel_for(int64_t i = 0; i < n; i++) { solution[i] = 0; }
@@ -553,6 +559,25 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
   int32_t insertCounter = 0;
 
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
+
+
+
+
+  MaximumMatcher mm(approxGraph,
+                    remaining_vertices);
+  /*
+  MaximumMatcher mm(approxGraph,
+                    remaining_vertices,
+                    evenlevel,
+                    oddlevel,
+                    blossom,
+                    predecessors,
+                    anomalies,
+                    unvisited_v,
+                    unused_e,
+                    unvisited_e,
+                    bridges);*/
+
   /*
   Dominated(approxGraph,
             remaining_vertices,
@@ -976,7 +1001,7 @@ template <typename SM> bool VC_Reductions::Match(SM &approxGraph,
     */
     //VertexSubset struction2 = approxGraph.edgeMap(remaining_vertices, RESPOND_2_F(match, request, approxGraph), true, 20);
     //approxGraph.edgeMap(remaining_vertices, RESPOND_2_F(match, request, approxGraph), false, 20);
-    approxGraph.edgeMap(remaining_vertices, RESPOND_3_F(match, request, approxGraph), false, 20);
+    approxGraph.edgeMap(remaining_vertices, RESPOND_2_F(match, request, approxGraph), false, 20);
 
     /*
     printf("vert REQUEST after respond\n");
