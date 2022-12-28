@@ -4,6 +4,10 @@
 #include "Match.h"
 #include <limits>
 
+
+#include <bits/stdc++.h>
+using namespace std;
+
 template <typename T, typename SM> 
 struct GET_LEVEL_I_F {
   int64_t i;
@@ -25,20 +29,32 @@ template <typename T, typename SM> struct EVEN_LEVEL_F {
   T * bridges;
   T * predecessors;
   T * anomalies;
+  T * bridgesCount;
+  T * predecessorsCount;
+  T * anomaliesCount;
   bool *unvisited_v;
   bool *unused_e;
   bool *unvisited_e;
   int64_t i;
+  SM &predecessors_SST;
+  SM &anomalies_SST;
+  SM &bridges_SST;
   const SM &G;
   EVEN_LEVEL_F(T * _evenlevel,
         T * _oddlevel,
         T * _bridges,
         T * _predecessors,
         T * _anomalies,
+        T * _bridgesCount,
+        T * _predecessorsCount,
+        T * _anomaliesCount,
         bool *_unvisited_v,
         bool *_unused_e,
         bool *_unvisited_e,
         int64_t _i,
+        SM &_predecessors_SST,
+        SM &_anomalies_SST,
+        SM &_bridges_SST,
         const SM &_G) :
   evenlevel(_evenlevel),
   oddlevel(_oddlevel),
@@ -49,6 +65,9 @@ template <typename T, typename SM> struct EVEN_LEVEL_F {
   unused_e(_unused_e),
   unvisited_e(_unvisited_e),
   i(_i),
+  predecessors_SST(_predecessors_SST),
+  anomalies_SST(_anomalies_SST),
+  bridges_SST(_bridges_SST),
   G(_G)  {}
 
   /*
@@ -113,9 +132,9 @@ template <typename T, typename SM> struct EVEN_LEVEL_F {
 
 
 template <typename SM> 
-class MaximumMatcher {
+class MaximumMatcherMicali {
   public:
-    MaximumMatcher(
+    MaximumMatcherMicali(
                     SM &_G,
                     VertexSubset & _remainingVertices) : 
                     G(_G),
@@ -131,12 +150,16 @@ class MaximumMatcher {
   blossom = (int32_t *)malloc(n * sizeof(int32_t));
   predecessors = (int32_t *)malloc(n * sizeof(int32_t));
   anomalies = (int32_t *)malloc(n * sizeof(int32_t));
+  predecessorsCount = (int32_t *)malloc(n * sizeof(int32_t));
+  anomaliesCount = (int32_t *)malloc(n * sizeof(int32_t));
+
   unvisited_v = (bool *)malloc(n * sizeof(bool));
 
   unused_e = (bool *)malloc(e * sizeof(bool));
   unvisited_e = (bool *)malloc(e * sizeof(bool));
 
   bridges = (int32_t *)malloc(n * sizeof(int32_t));
+  bridgesCount = (int32_t *)malloc(n * sizeof(int32_t));
 
   request = (int32_t *)malloc(n * sizeof(int32_t));
   match = (int32_t *)malloc(n * sizeof(int32_t));
@@ -172,7 +195,22 @@ class MaximumMatcher {
 
       // 3 
       if (i % 2 == 0){
-
+        VertexSubset vertices_to_delete = G.edgeMap(remainingVertices, EVEN_LEVEL_F(evenlevel,
+        oddlevel,
+        bridges,
+        predecessors,
+        anomalies,
+        bridgesCount,
+        predecessorsCount,
+        anomaliesCount,
+        unvisited_v,
+        unused_e,
+        unvisited_e,
+        i,
+        predecessors_SST,
+        anomalies_SST,
+        bridges_SST,
+        G), true, 20);
       }
     }
 
@@ -201,6 +239,12 @@ class MaximumMatcher {
         int32_t *anomalies;
         int32_t *bridges;
 
+
+        // Default count size == 5
+        int32_t *predecessorsCount;
+        int32_t *anomaliesCount;
+        int32_t *bridgesCount;
+
         bool *unvisited_v;
 
         // Length E
@@ -213,3 +257,163 @@ class MaximumMatcher {
         int32_t *match;
 
 };
+
+struct struct_edge{int v;struct_edge* n;};
+typedef struct_edge* edge;
+
+template <typename SM> 
+class MaximumMatcherBlossom {
+  public:
+    MaximumMatcherBlossom(
+                    SM &_G,
+                    VertexSubset & _remainingVertices) : 
+                    G(_G),
+                    V(_G.get_rows()),
+                    E(_G.get_cols()),
+                    remainingVertices(_remainingVertices)
+    {
+      pool = (struct_edge *)malloc(V * V * sizeof(struct_edge));
+      adj = (edge *)malloc(V * sizeof(edge));
+      match = (int *)malloc(V * sizeof(int));
+      q = (int *)malloc(V * sizeof(int));
+      father = (int *)malloc(V * sizeof(int));
+      base = (int *)malloc(V * sizeof(int));
+
+      inq = (bool *)malloc(V * sizeof(bool));
+      inb = (bool *)malloc(V * sizeof(bool));
+      ed = (bool**)malloc(V * sizeof(bool*));
+      for (int i = 0; i < V; i++)
+        ed[i] = (bool*)malloc(V * sizeof(bool));
+    }
+
+    int edmonds();
+
+    private:
+        SM &G;
+        VertexSubset & remainingVertices;
+
+        struct_edge *pool;
+        edge top=pool,*adj;
+        int V,E,*match,qh,qt,*q,*father,*base;
+        bool *inq,*inb,**ed;
+        //struct_edge pool[M*M*2];
+        //edge top=pool,adj[M];
+        //int V,E,match[M],qh,qt,q[M],father[M],base[M];
+        //bool inq[M],inb[M],ed[M][M];
+
+        void add_edge(int u,int v);
+        int LCA(int root,int u,int v);
+        void mark_blossom(int lca,int u);
+        void blossom_contraction(int s,int u,int v);
+        int find_augmenting_path(int s);
+        int augment_path(int s,int t);
+
+};
+
+template <typename SM> 
+void MaximumMatcherBlossom<SM>::add_edge(int u,int v)
+{
+  top->v=v,top->n=adj[u],adj[u]=top++;
+  top->v=u,top->n=adj[v],adj[v]=top++;
+}
+template <typename SM> 
+int MaximumMatcherBlossom<SM>::LCA(int root,int u,int v)
+{
+  static bool *inp;
+  inp = (bool *)malloc(V * sizeof(bool)); 
+  memset(inp,0,sizeof(inp));
+  while(1)
+    {
+      inp[u=base[u]]=true;
+      if (u==root) break;
+      u=father[match[u]];
+    }
+  while(1)
+    {
+      if (inp[v=base[v]]) return v;
+      else v=father[match[v]];
+    }
+    free(inp);
+}
+template <typename SM> 
+void MaximumMatcherBlossom<SM>::mark_blossom(int lca,int u)
+{
+  while (base[u]!=lca)
+    {
+      int v=match[u];
+      inb[base[u]]=inb[base[v]]=true;
+      u=father[v];
+      if (base[u]!=lca) father[u]=v;
+    }
+}
+template <typename SM> 
+void MaximumMatcherBlossom<SM>::blossom_contraction(int s,int u,int v)
+{
+  int lca=LCA(s,u,v);
+  memset(inb,0,sizeof(inb));
+  mark_blossom(lca,u);
+  mark_blossom(lca,v);
+  if (base[u]!=lca)
+    father[u]=v;
+  if (base[v]!=lca)
+    father[v]=u;
+  for (int u=0;u<V;u++)
+    if (inb[base[u]])
+      {
+	base[u]=lca;
+	if (!inq[u])
+	  inq[q[++qt]=u]=true;
+      }
+}
+template <typename SM> 
+int MaximumMatcherBlossom<SM>::find_augmenting_path(int s)
+{
+  memset(inq,0,sizeof(inq));
+  memset(father,-1,sizeof(father));
+  for (int i=0;i<V;i++) base[i]=i;
+  inq[q[qh=qt=0]=s]=true;
+  while (qh<=qt)
+    {
+      int u=q[qh++];
+      for (edge e=adj[u];e;e=e->n)
+        {
+	  int v=e->v;
+	  if (base[u]!=base[v]&&match[u]!=v)
+	    if ((v==s)||(match[v]!=-1 && father[match[v]]!=-1))
+	      blossom_contraction(s,u,v);
+	    else if (father[v]==-1)
+	      {
+		father[v]=u;
+		if (match[v]==-1)
+		  return v;
+		else if (!inq[match[v]])
+		  inq[q[++qt]=match[v]]=true;
+	      }
+        }
+    }
+  return -1;
+}
+template <typename SM> 
+int MaximumMatcherBlossom<SM>::augment_path(int s,int t)
+{
+  int u=t,v,w;
+  while (u!=-1)
+    {
+      v=father[u];
+      w=match[v];
+      match[v]=u;
+      match[u]=v;
+      u=w;
+    }
+  return t!=-1;
+}
+template <typename SM> 
+int MaximumMatcherBlossom<SM>::edmonds()
+{
+  int matchc=0;
+  memset(match,-1,sizeof(match));
+  for (int u=0;u<V;u++)
+    if (match[u]==-1)
+      matchc+=augment_path(u,find_augmenting_path(u));
+  return matchc;
+}

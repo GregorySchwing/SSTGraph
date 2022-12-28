@@ -560,13 +560,12 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
 
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
 
-
-
-
-  MaximumMatcher mm(approxGraph,
-                    remaining_vertices);
+  MaximumMatcherBlossom mmb(approxGraph,
+                      remaining_vertices);
+  //MaximumMatcherMicali mm(approxGraph,
+  //                  remaining_vertices);
   /*
-  MaximumMatcher mm(approxGraph,
+  MaximumMatcherMicali mm(approxGraph,
                     remaining_vertices,
                     evenlevel,
                     oddlevel,
