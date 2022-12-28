@@ -63,21 +63,29 @@ template <typename T, typename SM> struct EVEN_LEVEL_F {
   */
 
   inline bool update(uint32_t s, uint32_t d) { // Update
-    if (evenlevel[s] < std::numeric_limits<int32_t>::max()){
-      int64_t temp = (evenlevel[s] + evenlevel[d])/2;
-      //bridges[temp] = ???
-    } else {
-      if (oddlevel[s] == std::numeric_limits<int32_t>::max()){
-        oddlevel[s] = i + 1;
+    // for each v with evenlevel == i
+    if (evenlevel[d] == i){
+      // unmatched, "unused" neighbors -- ??? Should "unused" be "unvisited"
+      if (evenlevel[s] < 4){
+
+      //if (match[s] < 4){
+        if (evenlevel[s] < std::numeric_limits<int32_t>::max()){
+          int64_t temp = (evenlevel[s] + evenlevel[d])/2;
+          //bridges[temp] = ???
+        } else {
+          if (oddlevel[s] == std::numeric_limits<int32_t>::max()){
+            oddlevel[s] = i + 1;
+          }
+          if (oddlevel[s] == i + 1){
+            //predecessors[s] = ???
+          }
+          if (oddlevel[s] < i){
+            //anomalies[s] = ???
+          }
+        } 
+        return false;
       }
-      if (oddlevel[s] == i + 1){
-        //predecessors[s] = ???
-      }
-      if (oddlevel[s] < i){
-        //anomalies[s] = ???
-      }
-    } 
-    return false;
+    }
   }
   /*
     In sparse mode, EdgeMap
@@ -113,7 +121,10 @@ class MaximumMatcher {
                     G(_G),
                     n(_G.get_rows()),
                     e(_G.get_cols()),
-                    remainingVertices(_remainingVertices)
+                    remainingVertices(_remainingVertices),
+                    predecessors_SST(SparseMatrixV<true, bool>(_G.get_rows(), _G.get_rows())),
+                    anomalies_SST(SparseMatrixV<true, bool>(_G.get_rows(), _G.get_rows())),
+                    bridges_SST(SparseMatrixV<true, bool>(_G.get_rows(), _G.get_rows()))
 {
   evenlevel = (int32_t *)malloc(n * sizeof(int32_t));
   oddlevel = (int32_t *)malloc(n * sizeof(int32_t));
@@ -175,20 +186,27 @@ class MaximumMatcher {
         int64_t e;
         int64_t i;
 
-        // Length V
+        // Dynamic length
         int32_t *evenlevel;
         int32_t *oddlevel;
         int32_t *blossom;
+
+        // Dynamic length
+        SM predecessors_SST;
+        SM anomalies_SST;
+        SM bridges_SST;
+        // Dynamic length
+
         int32_t *predecessors;
         int32_t *anomalies;
+        int32_t *bridges;
+
         bool *unvisited_v;
 
         // Length E
         bool *unused_e;
         bool *unvisited_e;
 
-        // Dynamic length
-        int32_t *bridges;
 
         // Matcher variables
         int32_t *request;
