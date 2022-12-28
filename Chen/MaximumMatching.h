@@ -284,6 +284,8 @@ class MaximumMatcherBlossom {
       ed = (bool**)malloc(V * sizeof(bool*));
       for (int i = 0; i < V; i++)
         ed[i] = (bool*)malloc(V * sizeof(bool));
+
+      
     }
 
     int edmonds();
@@ -377,18 +379,18 @@ int MaximumMatcherBlossom<SM>::find_augmenting_path(int s)
       int u=q[qh++];
       for (edge e=adj[u];e;e=e->n)
         {
-	  int v=e->v;
-	  if (base[u]!=base[v]&&match[u]!=v)
-	    if ((v==s)||(match[v]!=-1 && father[match[v]]!=-1))
-	      blossom_contraction(s,u,v);
-	    else if (father[v]==-1)
-	      {
-		father[v]=u;
-		if (match[v]==-1)
-		  return v;
-		else if (!inq[match[v]])
-		  inq[q[++qt]=match[v]]=true;
-	      }
+          int v=e->v;
+          if (base[u]!=base[v]&&match[u]!=v)
+            if ((v==s)||(match[v]!=-1 && father[match[v]]!=-1))
+              blossom_contraction(s,u,v);
+            else if (father[v]==-1)
+            {
+              father[v]=u;
+              if (match[v]==-1)
+                return v;
+              else if (!inq[match[v]])
+                inq[q[++qt]=match[v]]=true;
+            }
         }
     }
   return -1;
