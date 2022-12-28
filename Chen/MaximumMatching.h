@@ -273,7 +273,6 @@ class MaximumMatcherBlossom {
                     remainingVertices(_remainingVertices)
     {
       pool = (struct_edge *)malloc(V * V * sizeof(struct_edge));
-      adj = (edge *)malloc(V * sizeof(edge));
       match = (int *)malloc(V * sizeof(int));
       q = (int *)malloc(V * sizeof(int));
       father = (int *)malloc(V * sizeof(int));
@@ -281,9 +280,10 @@ class MaximumMatcherBlossom {
 
       inq = (bool *)malloc(V * sizeof(bool));
       inb = (bool *)malloc(V * sizeof(bool));
-      ed = (bool**)malloc(V * sizeof(bool*));
-      for (int i = 0; i < V; i++)
-        ed[i] = (bool*)malloc(V * sizeof(bool));
+
+      //ed = (bool**)malloc(V * sizeof(bool*));
+      //for (int i = 0; i < V; i++)
+      //  ed[i] = (bool*)malloc(V * sizeof(bool));
 
       
     }
@@ -295,9 +295,9 @@ class MaximumMatcherBlossom {
         VertexSubset & remainingVertices;
 
         struct_edge *pool;
-        edge top=pool,*adj;
+        edge top=pool;
         int V,E,*match,qh,qt,*q,*father,*base;
-        bool *inq,*inb,**ed;
+        bool *inq,*inb;
         //struct_edge pool[M*M*2];
         //edge top=pool,adj[M];
         //int V,E,match[M],qh,qt,q[M],father[M],base[M];
@@ -311,19 +311,12 @@ class MaximumMatcherBlossom {
         int augment_path(int s,int t);
 
 };
-
-template <typename SM> 
-void MaximumMatcherBlossom<SM>::add_edge(int u,int v)
-{
-  top->v=v,top->n=adj[u],adj[u]=top++;
-  top->v=u,top->n=adj[v],adj[v]=top++;
-}
 template <typename SM> 
 int MaximumMatcherBlossom<SM>::LCA(int root,int u,int v)
 {
   static bool *inp;
   inp = (bool *)malloc(V * sizeof(bool)); 
-  memset(inp,0,sizeof(inp));
+  memset(inp,0,V*sizeof(bool));
   while(1)
     {
       inp[u=base[u]]=true;
@@ -352,7 +345,7 @@ template <typename SM>
 void MaximumMatcherBlossom<SM>::blossom_contraction(int s,int u,int v)
 {
   int lca=LCA(s,u,v);
-  memset(inb,0,sizeof(inb));
+  memset(inb,0,V*sizeof(bool));
   mark_blossom(lca,u);
   mark_blossom(lca,v);
   if (base[u]!=lca)
@@ -370,16 +363,28 @@ void MaximumMatcherBlossom<SM>::blossom_contraction(int s,int u,int v)
 template <typename SM> 
 int MaximumMatcherBlossom<SM>::find_augmenting_path(int s)
 {
-  memset(inq,0,sizeof(inq));
-  memset(father,-1,sizeof(father));
+  memset(inq,0,V*sizeof(bool));
+  memset(father,-1,V*sizeof(int));
   for (int i=0;i<V;i++) base[i]=i;
   inq[q[qh=qt=0]=s]=true;
   while (qh<=qt)
     {
       int u=q[qh++];
-      for (edge e=adj[u];e;e=e->n)
+      // adj list is 2d array of edges.
+      // edges store v and a ptr to the next e in the array.
+      // this avoids a counter for each row.
+      // the final edge has a null ptr hence
+      // e is false and the loop terminates.
+      // therefore, this should iterate over all the 
+      // edges belonging to u.
+      // it's possible this could be parallelized in the future.
+
+      // adj list
+      // for (edge e=adj[u];e;e=e->n)
+      std::vector<el_t> u_neighbors = G.get_neighbors(u);
+      for(int v : u_neighbors) 
         {
-          int v=e->v;
+          //int v=e->v;
           if (base[u]!=base[v]&&match[u]!=v)
             if ((v==s)||(match[v]!=-1 && father[match[v]]!=-1))
               blossom_contraction(s,u,v);
@@ -413,9 +418,12 @@ template <typename SM>
 int MaximumMatcherBlossom<SM>::edmonds()
 {
   int matchc=0;
-  memset(match,-1,sizeof(match));
+  memset(match,-1,V*sizeof(int));
   for (int u=0;u<V;u++)
     if (match[u]==-1)
       matchc+=augment_path(u,find_augmenting_path(u));
+  for (int i=0;i<V;i++)
+    if (i<match[i])
+      cout<<i+1<<" "<<match[i]+1<<endl;
   return matchc;
 }

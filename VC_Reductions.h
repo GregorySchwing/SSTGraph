@@ -562,6 +562,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
 
   MaximumMatcherBlossom mmb(approxGraph,
                       remaining_vertices);
+  mmb.edmonds();
   //MaximumMatcherMicali mm(approxGraph,
   //                  remaining_vertices);
   /*
@@ -598,6 +599,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
             removeCounter,
             insertCounter);
   */
+  /*
   GeneralFold(approxGraph,
             remaining_vertices,
             numberAntiEdges,
@@ -609,6 +611,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
             edgesToInsert,
             removeCounter,
             insertCounter);
+  */
 
   printf("Chen: ");
   for (uint32_t j = 0; j < approxGraph.get_rows(); j++) {
