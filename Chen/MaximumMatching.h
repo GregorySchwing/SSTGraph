@@ -424,6 +424,6 @@ int MaximumMatcherBlossom<SM>::edmonds()
       matchc+=augment_path(u,find_augmenting_path(u));
   for (int i=0;i<V;i++)
     if (i<match[i])
-      cout<<i+1<<" "<<match[i]+1<<endl;
+      cout<<i<<" "<<match[i]<<endl;
   return matchc;
 }
