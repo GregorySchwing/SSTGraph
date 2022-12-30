@@ -25,16 +25,19 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 struct H_F {
   int32_t *Parents;
-  explicit H_F(int32_t *_Parents) : Parents(_Parents) {}
+  int32_t *Depth;
+  explicit H_F(int32_t *_Parents, int32_t *_Depth) : Parents(_Parents), Depth(_Depth) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
     if (Parents[d] == -1) {
       Parents[d] = s;
+      Depth[d] = Depth[s]+1;
       return true;
     }
     return false;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    return __sync_bool_compare_and_swap(&Parents[d], -1, s);
+    return __sync_bool_compare_and_swap(&Parents[d], -1, s) && 
+    __sync_bool_compare_and_swap(&Depth[d], -1, Depth[s]+1);
   }
   // cond function checks if vertex has been visited yet
   inline bool cond(uint32_t d) { return (Parents[d] == -1); }
@@ -42,17 +45,20 @@ struct H_F {
 
 struct I_F {
   int32_t *Parents;
+  int32_t *Depth;
   int32_t *match;
-  explicit I_F(int32_t *_Parents, int32_t *_match) : Parents(_Parents), match(_match) {}
+  explicit I_F(int32_t *_Parents, int32_t *_Depth, int32_t *_match) : Parents(_Parents), Depth(_Depth), match(_match) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
     if (Parents[d] == -1) {
       Parents[d] = s;
+      Depth[d] = Depth[s]+1;
       return true;
     }
     return false;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    return __sync_bool_compare_and_swap(&Parents[d], -1, s);
+    return __sync_bool_compare_and_swap(&Parents[d], -1, s) && 
+    __sync_bool_compare_and_swap(&Depth[d], -1, Depth[s]+1);
   }
   // cond function checks if vertex has been visited yet
   // also destination should be in M.
@@ -62,19 +68,24 @@ struct I_F {
 struct CYCLE_1_F {
   int32_t *Parents;
   int32_t *Pairs;
-  explicit CYCLE_1_F(int32_t *_Parents, int32_t *_Pairs) : Parents(_Parents), Pairs(_Pairs) {}
+  int32_t *Depth;
+
+  explicit CYCLE_1_F(int32_t *_Parents, int32_t *_Pairs, int32_t *_Depth) : 
+  Parents(_Parents), Pairs(_Pairs), Depth(_Depth) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
-    if (Parents[d] == -1) {
-      Parents[d] = s;
+    printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
+    if (Depth[d] == Depth[s]) {
+      Pairs[d] = s;
       return true;
     }
     return false;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    return __sync_bool_compare_and_swap(&Parents[d], -1, s);
+    return __sync_bool_compare_and_swap(&Depth[d], Depth[s], s);
   }
   // cond function checks if vertex has been visited yet
-  inline bool cond(uint32_t d) { return (Parents[d] == -1); }
+  // Only check for cycles amongst already visted vertices.
+  inline bool cond(uint32_t d) { return (Parents[d] != -1); }
 };
 
 template <typename SM> int32_t *CR_with_edge_map(const SM &G, int* match, uint32_t src) {
@@ -86,8 +97,10 @@ template <typename SM> int32_t *CR_with_edge_map(const SM &G, int* match, uint32
   }
   // creates Parents array, initialized to all -1, except for start
   int32_t *Parents = (int32_t *)malloc(n * sizeof(int32_t));
-  // creates Parents array, initialized to all -1, except for start
-  int32_t *Parents = (int32_t *)malloc(n * sizeof(int32_t));
+  // creates Depth array, initialized to all -1, except for start  
+  // necessary for the cycle detecter, to identify edges to other
+  // vertices at the same depth as me.
+  int32_t *Depth = (int32_t *)malloc(n * sizeof(int32_t));
   // creates Pairs array, initialized to all -1
   // when an edge is shared between two vertices in H or I,
   // they set each other, so they may backtrack until they converge.
@@ -99,16 +112,22 @@ template <typename SM> int32_t *CR_with_edge_map(const SM &G, int* match, uint32
     return Parents;
   }
   Parents[start] = start;
+  Depth[start] = 0;
   VertexSubset frontier = VertexSubset(start, n); // creates initial frontier
   while (frontier.non_empty()) { // loop until frontier is empty
-    VertexSubset H = G.edgeMap(frontier, H_F(Parents), true, 20);
-
+    VertexSubset H = G.edgeMap(frontier, H_F(Parents, Depth), true, 20);
     printf("H\n");
     H.print();
+    VertexSubset H_Cy = G.edgeMap(H, CYCLE_1_F(Parents, Pairs, Depth), true, 20);
+    printf("H_Cy\n");
+    H_Cy.print();
     // Check for cycles in H
-    VertexSubset I = G.edgeMap(H, I_F(Parents, match), true, 20);
+    VertexSubset I = G.edgeMap(H, I_F(Parents, match, Depth), true, 20);
     printf("I\n");
     I.print();
+    VertexSubset I_Cy = G.edgeMap(I, CYCLE_1_F(Parents, Pairs, Depth), true, 20);
+    printf("I_Cy\n");
+    I_Cy.print();
     // Check for cycles in I
     // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
     //    ^ added by me    ^ to indicate we are removing some edges 
