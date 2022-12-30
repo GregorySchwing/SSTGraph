@@ -59,6 +59,24 @@ struct I_F {
   inline bool cond(uint32_t d) { return (Parents[d] == -1 && match[d] != -1); }
 };
 
+struct CYCLE_1_F {
+  int32_t *Parents;
+  int32_t *Pairs;
+  explicit CYCLE_1_F(int32_t *_Parents, int32_t *_Pairs) : Parents(_Parents), Pairs(_Pairs) {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    if (Parents[d] == -1) {
+      Parents[d] = s;
+      return true;
+    }
+    return false;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    return __sync_bool_compare_and_swap(&Parents[d], -1, s);
+  }
+  // cond function checks if vertex has been visited yet
+  inline bool cond(uint32_t d) { return (Parents[d] == -1); }
+};
+
 template <typename SM> int32_t *CR_with_edge_map(const SM &G, int* match, uint32_t src) {
   int64_t start = src;
   int64_t n = G.get_rows();
@@ -68,7 +86,15 @@ template <typename SM> int32_t *CR_with_edge_map(const SM &G, int* match, uint32
   }
   // creates Parents array, initialized to all -1, except for start
   int32_t *Parents = (int32_t *)malloc(n * sizeof(int32_t));
+  // creates Parents array, initialized to all -1, except for start
+  int32_t *Parents = (int32_t *)malloc(n * sizeof(int32_t));
+  // creates Pairs array, initialized to all -1
+  // when an edge is shared between two vertices in H or I,
+  // they set each other, so they may backtrack until they converge.
+  int32_t *Pairs = (int32_t *)malloc(n * sizeof(int32_t));
   parallel_for(int64_t i = 0; i < n; i++) { Parents[i] = -1; }
+  parallel_for(int64_t i = 0; i < n; i++) { Pairs[i] = -1; }
+
   if (n == 0) {
     return Parents;
   }
@@ -76,6 +102,7 @@ template <typename SM> int32_t *CR_with_edge_map(const SM &G, int* match, uint32
   VertexSubset frontier = VertexSubset(start, n); // creates initial frontier
   while (frontier.non_empty()) { // loop until frontier is empty
     VertexSubset H = G.edgeMap(frontier, H_F(Parents), true, 20);
+
     printf("H\n");
     H.print();
     // Check for cycles in H
