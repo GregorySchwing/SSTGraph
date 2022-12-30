@@ -75,14 +75,20 @@ template <typename SM> int32_t *CR_with_edge_map(const SM &G, int* match, uint32
   Parents[start] = start;
   VertexSubset frontier = VertexSubset(start, n); // creates initial frontier
   while (frontier.non_empty()) { // loop until frontier is empty
-        VertexSubset H = G.edgeMap(frontier, H_F(Parents), true, 20);
-        printf("H\n");
-        H.print();
-        VertexSubset I = G.edgeMap(H, I_F(Parents, match), true, 20);
-        printf("I\n");
-        I.print();
-        frontier.del();
-        frontier = I;
+    VertexSubset H = G.edgeMap(frontier, H_F(Parents), true, 20);
+    printf("H\n");
+    H.print();
+    // Check for cycles in H
+    VertexSubset I = G.edgeMap(H, I_F(Parents, match), true, 20);
+    printf("I\n");
+    I.print();
+    // Check for cycles in I
+    frontier.del();
+    // Not sure if its this simple
+    // Technically need to ensure no previous H vertices are in the frontier.
+    // 5.4 else Hi=N(Ii) \ U_j=0..i−1 Hj; } 
+    // possible could do a vertex map on frontier depth. though not currently tracking this.
+    frontier = I;
   }
   frontier.del();
   return Parents;
