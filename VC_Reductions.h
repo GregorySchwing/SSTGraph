@@ -566,15 +566,11 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
                       remaining_vertices);
   mmb.edmonds();
   int * match = mmb.get_match();
-  int v;
-  // choose first free vertex
-  // 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
-  for (int i = 0; i < n; ++i)
-      if (match[i] == -1){
-          v = i;
-          break;
-      }
-  int32_t *parallel_cr_result = CR_with_edge_map(approxGraph, match, v);
+
+  CrownReduction cr(approxGraph,
+                    remaining_vertices,
+                    mmb.get_match());
+  //int32_t *parallel_cr_result = CR_with_edge_map(approxGraph, match, v);
   /*
   CrownReduction cr(approxGraph,
                       remaining_vertices,

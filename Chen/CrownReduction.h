@@ -65,12 +65,12 @@ struct I_F {
   inline bool cond(uint32_t d) { return (Parents[d] == -1 && match[d] != -1); }
 };
 
-struct CYCLE_1_F {
+struct CYCLE_DETECTION_F {
   int32_t *Parents;
   int32_t *Pairs;
   int32_t *Depth;
 
-  explicit CYCLE_1_F(int32_t *_Parents, int32_t *_Pairs, int32_t *_Depth) : 
+  explicit CYCLE_DETECTION_F(int32_t *_Parents, int32_t *_Pairs, int32_t *_Depth) : 
   Parents(_Parents), Pairs(_Pairs), Depth(_Depth) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
     printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
@@ -88,58 +88,26 @@ struct CYCLE_1_F {
   inline bool cond(uint32_t d) { return (Parents[d] != -1); }
 };
 
-template <typename SM> int32_t *CR_with_edge_map(const SM &G, int* match, uint32_t src) {
-  int64_t start = src;
-  int64_t n = G.get_rows();
-  int32_t i = 0;
-  if (n == 0) {
-    return nullptr;
-  }
-  // creates Parents array, initialized to all -1, except for start
-  int32_t *Parents = (int32_t *)malloc(n * sizeof(int32_t));
-  // creates Depth array, initialized to all -1, except for start  
-  // necessary for the cycle detecter, to identify edges to other
-  // vertices at the same depth as me.
-  int32_t *Depth = (int32_t *)malloc(n * sizeof(int32_t));
-  // creates Pairs array, initialized to all -1
-  // when an edge is shared between two vertices in H or I,
-  // they set each other, so they may backtrack until they converge.
-  int32_t *Pairs = (int32_t *)malloc(n * sizeof(int32_t));
-  parallel_for(int64_t i = 0; i < n; i++) { Parents[i] = -1; }
-  parallel_for(int64_t i = 0; i < n; i++) { Pairs[i] = -1; }
 
-  if (n == 0) {
-    return Parents;
+struct CYCLE_BT_F {
+  int32_t *Parents;
+  int32_t *Pairs;
+
+  explicit CYCLE_BT_F(int32_t *_Parents, int32_t *_Pairs) : 
+  Parents(_Parents), Pairs(_Pairs) {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    if (Parents[s] == d) {
+      return true;
+    }
+    return false;
   }
-  Parents[start] = start;
-  Depth[start] = 0;
-  VertexSubset frontier = VertexSubset(start, n); // creates initial frontier
-  while (frontier.non_empty()) { // loop until frontier is empty
-    VertexSubset H = G.edgeMap(frontier, H_F(Parents, Depth), true, 20);
-    printf("H\n");
-    H.print();
-    VertexSubset H_Cy = G.edgeMap(H, CYCLE_1_F(Parents, Pairs, Depth), true, 20);
-    printf("H_Cy\n");
-    H_Cy.print();
-    // Check for cycles in H
-    VertexSubset I = G.edgeMap(H, I_F(Parents, match, Depth), true, 20);
-    printf("I\n");
-    I.print();
-    VertexSubset I_Cy = G.edgeMap(I, CYCLE_1_F(Parents, Pairs, Depth), true, 20);
-    printf("I_Cy\n");
-    I_Cy.print();
-    // Check for cycles in I
-    // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
-    //    ^ added by me    ^ to indicate we are removing some edges 
-    // and adding another (others), and not only removing. 
-    // the set difference only applies to the {<xq, NM(xq)>}} term.
-    frontier.del();
-    // Not sure if its this simple
-    // Technically need to ensure no previous H vertices are in the frontier.
-    // 5.4 else Hi=N(Ii) \ U_j=0..i−1 Hj; } 
-    // possible could do a vertex map on frontier depth. though not currently tracking this.
-    frontier = I;
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    if (Parents[s] == d) {
+      return true;
+    }
+    return false;
   }
-  frontier.del();
-  return Parents;
-}
+  // cond function checks if vertex has been visited yet
+  // Only check for cycles amongst already visted vertices.
+  inline bool cond(uint32_t d) { return (Parents[d] != -1); }
+};
