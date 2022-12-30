@@ -88,7 +88,8 @@ struct CYCLE_DETECTION_F {
   inline bool cond(uint32_t d) { return (Parents[d] != -1); }
 };
 
-
+// Honestly I'm not sure if this is terminating because 6 is root
+// or because 6 splits the cycle.
 struct CYCLE_BT_F {
   int32_t *Parents;
   int32_t *Pairs;
@@ -97,17 +98,21 @@ struct CYCLE_BT_F {
   Parents(_Parents), Pairs(_Pairs) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
     if (Parents[s] == d) {
-      return true;
+      bool notConverged = Pairs[d] == -1;
+      printf("s %d converged %d\n", s, !notConverged);
+      Pairs[d] = Pairs[s];
+      return !notConverged;
     }
     return false;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     if (Parents[s] == d) {
-      return true;
+      // The first call to this will return true, but if they are converging,
+      // the second will return false.  True & False == False, so the BT with terminate empty.
+        return !(__sync_bool_compare_and_swap(&Pairs[d], -1, Pairs[s]));
     }
     return false;
   }
-  // cond function checks if vertex has been visited yet
-  // Only check for cycles amongst already visted vertices.
-  inline bool cond(uint32_t d) { return (Parents[d] != -1); }
+  // Only BT to parents while the cycle hasn't converged.
+  inline bool cond(uint32_t d) { return true; }
 };
