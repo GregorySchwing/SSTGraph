@@ -83,6 +83,10 @@ template <typename SM> int32_t *CR_with_edge_map(const SM &G, int* match, uint32
     printf("I\n");
     I.print();
     // Check for cycles in I
+    // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
+    //    ^ added by me    ^ to indicate we are removing some edges 
+    // and adding another (others), and not only removing. 
+    // the set difference only applies to the {<xq, NM(xq)>}} term.
     frontier.del();
     // Not sure if its this simple
     // Technically need to ensure no previous H vertices are in the frontier.
