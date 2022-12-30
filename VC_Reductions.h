@@ -9,7 +9,9 @@
 #include "Chen/GeneralFold.h"
 #include "Chen/Match.h"
 #include "Chen/MaximumMatching.h"
+#include "Chen/CrownReduction.h"
 
+#include "utils/CrownReduction.h"
 // This code is part of the project "Ligra: A Lightweight Graph Processing
 // Framework for Shared Memory", presented at Principles and Practice of
 // Parallel Programming, 2013.
@@ -563,9 +565,21 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
   MaximumMatcherBlossom mmb(approxGraph,
                       remaining_vertices);
   mmb.edmonds();
-  //MaximumMatcherMicali mm(approxGraph,
-  //                  remaining_vertices);
+  int * match = mmb.get_match();
+  int v;
+  // choose first free vertex
+  // 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
+  for (int i = 0; i < n; ++i)
+      if (match[i] == -1){
+          v = i;
+          break;
+      }
+  int32_t *parallel_cr_result = CR_with_edge_map(approxGraph, match, v);
   /*
+  CrownReduction cr(approxGraph,
+                      remaining_vertices,
+                      mmb.get_match());
+
   MaximumMatcherMicali mm(approxGraph,
                     remaining_vertices,
                     evenlevel,

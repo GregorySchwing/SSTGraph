@@ -287,6 +287,17 @@ class MaximumMatcherBlossom {
 
       
     }
+    ~MaximumMatcherBlossom(){
+      free(pool);
+      free(match);
+      free(q);
+      free(father);
+      free(base);
+      free(inq);
+      free(inb);
+    }
+
+    int* get_match(){return match;}
 
     int edmonds();
 
