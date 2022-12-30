@@ -99,7 +99,7 @@ struct CYCLE_BT_F {
   inline bool update(uint32_t s, uint32_t d) { // Update
     if (Parents[s] == d) {
       bool notConverged = Pairs[d] == -1;
-      printf("s %d converged %d\n", s, !notConverged);
+      //printf("s %d converged %d\n", s, !notConverged);
       Pairs[d] = Pairs[s];
       return !notConverged;
     }
