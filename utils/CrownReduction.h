@@ -278,6 +278,7 @@ int32_t * CrownReduction<SM>::CR_with_edge_map(const SM &G, int* match, uint32_t
   int64_t start = src;
   int64_t n = G.get_rows();
   int32_t i = 0;
+  int32_t q;
   if (n == 0) {
     return nullptr;
   }
@@ -292,13 +293,16 @@ int32_t * CrownReduction<SM>::CR_with_edge_map(const SM &G, int* match, uint32_t
   Parents[start] = start;
   Depth[start] = 0;
   VertexSubset frontier = VertexSubset(start, n); // creates initial frontier
+  VertexSubset H;
+  VertexSubset I;
   while (frontier.non_empty()) { // loop until frontier is empty
-    VertexSubset H = G.edgeMap(frontier, H_F(Parents, Depth), true, 20);
+    H = G.edgeMap(frontier, H_F(Parents, Depth), true, 20);
     printf("H\n");
     H.print();
     VertexSubset H_Cy = G.edgeMap(H, CYCLE_DETECTION_F(Parents, NumChildren, Depth), true, 20);
     // Check for cycles in H
     if (H_Cy.get_n()){
+        q = i;
         printf("H_Cy\n");
         H_Cy.print();
         // Might be unneccesary to copy.
@@ -312,15 +316,31 @@ int32_t * CrownReduction<SM>::CR_with_edge_map(const SM &G, int* match, uint32_t
             H_BT_Frontier = H_BT_Frontier_Int;
         } while (!xq.get_n());
         // This must be Xq since all the cycles have to be the same depth.
+        // Consider a for loop to remove all cycles, if Xq is a set > 1.
         printf("Xq\n");
         xq.print();
+        el_t scalar_xq = xq.pop();
+        // xq is in an I level.
+        // This handles the MM. Still need to remove CY from future calls
+        while(q != 0){
+            match[scalar_xq] = -1;
+            match[Parents[scalar_xq]] = Parents[Parents[scalar_xq]];
+            match[Parents[Parents[scalar_xq]]] = Parents[scalar_xq];
+            q = q-2;
+        }   
+        // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
+        // where x_q−1 ∈ I_q−1 ∩ N(NM(xq)); q = q−1;}
+    } else {
+        ++i;
+        I = G.edgeMap(H, I_F(Parents, match, Depth), true, 20);
+        printf("I\n");
+        I.print();
     }
-    VertexSubset I = G.edgeMap(H, I_F(Parents, match, Depth), true, 20);
-    printf("I\n");
-    I.print();
+
     // Check for cycles in I
     VertexSubset I_Cy = G.edgeMap(I, CYCLE_DETECTION_F(Parents, NumChildren, Depth), true, 20);
     if (I_Cy.get_n()){
+        q = i;
         printf("I_Cy\n");
         I_Cy.print();
         // Check for cycles in I
