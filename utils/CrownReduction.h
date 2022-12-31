@@ -356,6 +356,17 @@ int32_t * CrownReduction<SM>::CR_with_edge_map(const SM &G, int* match, uint32_t
         // This must be Xq since all the cycles have to be the same depth.
         printf("Xq\n");
         xq.print();
+        el_t scalar_xq = xq.pop();
+        // xq is in an H level.
+        // This handles the MM. Still need to remove CY from future calls
+        while(q > 1){
+            match[scalar_xq] = -1;
+            match[Parents[scalar_xq]] = Parents[Parents[scalar_xq]];
+            match[Parents[Parents[scalar_xq]]] = Parents[scalar_xq];
+            q = q-2;
+        }   
+        // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
+        // where x_q−1 ∈ I_q−2 ∩ N(NM(xq)); q = q−1;}
     }
     // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
     //    ^ added by me    ^ to indicate we are removing some edges 
