@@ -70,10 +70,10 @@ class CrownReduction {
         // necessary for the cycle detecter, to identify edges to other
         // vertices at the same depth as me.
         Depth = (int32_t *)malloc(V * sizeof(int32_t));
-        // creates NumChildren array, initialized to all -1
+        // creates Pair array, initialized to all -1
         // when an edge is shared between two vertices in H or I,
         // they set each other, so they may backtrack until they converge.
-        NumChildren = (int32_t *)malloc(V * sizeof(int32_t));
+        Pair = (int32_t *)malloc(V * sizeof(int32_t));
 
         parallel_for(int64_t i = 0; i < V; i++) { Cycles[i] = 0; }
 
@@ -84,7 +84,7 @@ class CrownReduction {
         free(Cycles);
         free(Parents);
         free(Depth);
-        free(NumChildren);
+        free(Pair);
 
     }
     /*
@@ -153,7 +153,7 @@ class CrownReduction {
         int32_t* Cycles;
         int32_t* Parents;
         int32_t* Depth;
-        int32_t* NumChildren;
+        int32_t* Pair;
         int32_t* Solution;
 
         int V,E, v_0;
@@ -298,7 +298,7 @@ int32_t * CrownReduction<SM>::FindCrown() {
   }
 
   parallel_for(int64_t i = 0; i < n; i++) { Parents[i] = -1; }
-  parallel_for(int64_t i = 0; i < n; i++) { NumChildren[i] = -1; }
+  parallel_for(int64_t i = 0; i < n; i++) { Pair[i] = -1; }
   parallel_for(int64_t i = 0; i < n; i++) { Depth[i] = -1; }
 
   if (n == 0) {
@@ -313,7 +313,7 @@ int32_t * CrownReduction<SM>::FindCrown() {
     H = G.edgeMap(frontier, H_F(Parents, Depth), true, 20);
     printf("H\n");
     H.print();
-    VertexSubset H_Cy = G.edgeMap(H, CYCLE_DETECTION_F(Parents, NumChildren, Depth), true, 20);
+    VertexSubset H_Cy = G.edgeMap(H, CYCLE_DETECTION_F(Parents, Pair, Depth), true, 20);
     // Check for cycles in H
     if (H_Cy.get_n()){
         q = i;
@@ -325,21 +325,34 @@ int32_t * CrownReduction<SM>::FindCrown() {
         // Has to be a do while since calling get_n
         // on an uninitted xq causes a segfault
         do { // loop until a cycle converges.
-            //VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_F(Parents, NumChildren), true, 20);
-            //xq = G.vertexMap(H_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
-            VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_2_F(Parents, NumChildren), true, 20);
+            //VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_F(Parents, Pair), true, 20);
+            //xq = G.vertexMap(H_BT_Frontier_Int, GET_XQ_F(Pair), true); // mark visited
+            VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_2_F(Parents, Pair), true, 20);
             // Important to call this on the previous frontier (I_BT_Frontier).
             // Not the new frontier (I_BT_Frontier_Int) which tenatively contains xq.
             // We actually find Xq's child, then get the parent outside the loop.
-            xq = G.vertexMap(H_BT_Frontier, GET_XQ_2_F(NumChildren, Parents), true); // mark visited
+            xq = G.vertexMap(H_BT_Frontier, GET_XQ_2_F(Pair, Parents), true); // mark visited
             H_BT_Frontier = H_BT_Frontier_Int;
         } while (!xq.get_n());
         // This must be Xq since all the cycles have to be the same depth.
         printf("Xq's child\n");
         xq.print();
         el_t scalar_xq = xq.pop();
+        el_t cycleTail = Pair[scalar_xq];
         el_t truexq = Parents[scalar_xq];
-        printf("Xq %d\n", truexq);
+
+        printf("Xq %d cycleTail %d\n", truexq, cycleTail);
+        VertexSubset cycleStart = VertexSubset(cycleTail, n); // creates initial frontier
+        while (cycleStart.get_n()){ // loop until a cycle converges.
+            VertexSubset H_BT_Frontier_Int = G.edgeMap(cycleStart, H_SET_CYCLE_F(Parents, Pair, Cycles, truexq), true, 20);
+            printf("H_BT_Frontier_Int\n");
+            H_BT_Frontier_Int.print();
+            cycleStart = H_BT_Frontier_Int;
+        }
+        printf("Cycles\n");
+        for (int i = 0; i < V; ++i)
+            printf("%d ", Cycles[i]);
+        printf("\n");
         // xq is in an I level.
         // This handles the MM. Still need to remove CY from future calls
         while(q != 0){
@@ -348,15 +361,7 @@ int32_t * CrownReduction<SM>::FindCrown() {
             match[Parents[Parents[scalar_xq]]] = Parents[scalar_xq];
             q = q-2;
         }   
-        VertexSubset cycleStart = VertexSubset(scalar_xq, n); // creates initial frontier
-        // BFS back through the winning cycle adding vertices to Cycles
-        /*
-        do { // loop until a cycle converges.
-            VertexSubset H_BT_Frontier_Int = G.edgeMap(cycleStart, H_SET_CYCLE_F(Parents, NumChildren), true, 20);
-            xq = G.vertexMap(H_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
-            H_BT_Frontier = H_BT_Frontier_Int;
-        } while (!xq.get_n());
-        */
+
         // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
         // where x_q−1 ∈ I_q−1 ∩ N(NM(xq)); q = q−1;}
     } else {
@@ -367,7 +372,7 @@ int32_t * CrownReduction<SM>::FindCrown() {
     }
 
     // Check for cycles in I
-    VertexSubset I_Cy = G.edgeMap(I, CYCLE_DETECTION_F(Parents, NumChildren, Depth), true, 20);
+    VertexSubset I_Cy = G.edgeMap(I, CYCLE_DETECTION_F(Parents, Pair, Depth), true, 20);
     if (I_Cy.get_n()){
         q = i;
         printf("I_Cy\n");
@@ -378,14 +383,14 @@ int32_t * CrownReduction<SM>::FindCrown() {
         // Has to be a do while since calling get_n
         // on an uninitted xq causes a segfault
         do { // loop until a cycle converges.
-            VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_2_F(Parents, NumChildren), true, 20);
-            //VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_F(Parents, NumChildren), true, 20);
-            //xq = G.vertexMap(I_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
+            VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_2_F(Parents, Pair), true, 20);
+            //VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_F(Parents, Pair), true, 20);
+            //xq = G.vertexMap(I_BT_Frontier_Int, GET_XQ_F(Pair), true); // mark visited
             
             // Important to call this on the previous frontier (I_BT_Frontier).
             // Not the new frontier (I_BT_Frontier_Int) which tenatively contains xq.
             // We actually find Xq's child, then get the parent outside the loop.
-            xq = G.vertexMap(I_BT_Frontier, GET_XQ_2_F(NumChildren, Parents), true); // mark visited
+            xq = G.vertexMap(I_BT_Frontier, GET_XQ_2_F(Pair, Parents), true); // mark visited
 
             I_BT_Frontier = I_BT_Frontier_Int;
         } while (!xq.get_n());
@@ -393,9 +398,21 @@ int32_t * CrownReduction<SM>::FindCrown() {
         printf("Xq's child\n");
         xq.print();
         el_t scalar_xq = xq.pop();
+        el_t cycleTail = Pair[scalar_xq];
         el_t truexq = Parents[scalar_xq];
-        printf("Xq %d\n", truexq);
 
+        printf("Xq %d cycleTail %d\n", truexq, cycleTail);
+        VertexSubset cycleStart = VertexSubset(cycleTail, n); // creates initial frontier
+        while (cycleStart.get_n()){ // loop until a cycle converges.
+            VertexSubset H_BT_Frontier_Int = G.edgeMap(cycleStart, H_SET_CYCLE_F(Parents, Pair, Cycles, truexq), true, 20);
+            printf("H_BT_Frontier_Int\n");
+            H_BT_Frontier_Int.print();
+            cycleStart = H_BT_Frontier_Int;
+        }
+        printf("Cycles\n");
+        for (int i = 0; i < V; ++i)
+            printf("%d ", Cycles[i]);
+        printf("\n");
         // xq is in an H level.
         // This handles the MM. Still need to remove CY from future calls
         while(q > 1){

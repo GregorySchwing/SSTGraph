@@ -67,15 +67,15 @@ struct I_F {
 
 struct CYCLE_DETECTION_F {
   int32_t *Parents;
-  int32_t *NumChildren;
+  int32_t *Pair;
   int32_t *Depth;
 
-  explicit CYCLE_DETECTION_F(int32_t *_Parents, int32_t *_NumChildren, int32_t *_Depth) : 
-  Parents(_Parents), NumChildren(_NumChildren), Depth(_Depth) {}
+  explicit CYCLE_DETECTION_F(int32_t *_Parents, int32_t *_Pair, int32_t *_Depth) : 
+  Parents(_Parents), Pair(_Pair), Depth(_Depth) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
     //printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
     if (Depth[d] == Depth[s]) {
-      NumChildren[d] = s;
+      Pair[d] = s;
       return true;
     }
     return false;
@@ -83,7 +83,7 @@ struct CYCLE_DETECTION_F {
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     //printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
     if (Depth[d] == Depth[s]) {
-      NumChildren[d] = s;
+      Pair[d] = s;
       return true;
     }
     return false;
@@ -97,13 +97,13 @@ struct CYCLE_DETECTION_F {
 // or because 6 splits the cycle.
 struct CYCLE_BT_F {
   int32_t *Parents;
-  int32_t *NumChildren;
+  int32_t *Pair;
 
-  explicit CYCLE_BT_F(int32_t *_Parents, int32_t *_NumChildren) : 
-  Parents(_Parents), NumChildren(_NumChildren) {}
+  explicit CYCLE_BT_F(int32_t *_Parents, int32_t *_Pair) : 
+  Parents(_Parents), Pair(_Pair) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
     if (Parents[s] == d) {
-      ++NumChildren[d];
+      ++Pair[d];
       return true;
     }
     return false;
@@ -112,7 +112,7 @@ struct CYCLE_BT_F {
     if (Parents[s] == d) {
       // The first call to this will return true, but if they are converging,
       // the second will return false.  True & False == False, so the BT with terminate empty.
-      uint32_t nc = __sync_fetch_and_add(&NumChildren[d], 1);
+      uint32_t nc = __sync_fetch_and_add(&Pair[d], 1);
       return true;
     }
     return false;
@@ -150,23 +150,52 @@ struct CYCLE_BT_2_F {
 
 template <typename T> 
 struct GET_XQ_F {
-  T *NumChildren;
-  explicit GET_XQ_F(T *_NumChildren) : 
-  NumChildren(_NumChildren) {}
+  T *Pair;
+  explicit GET_XQ_F(T *_Pair) : 
+  Pair(_Pair) {}
   inline bool operator()(uintE v) {
-    return NumChildren[v];
+    return Pair[v];
   }
 };
 
 template <typename T> 
 struct GET_XQ_2_F {
-  T *NumChildren;
+  T *Pair;
   T *Parents;
-  explicit GET_XQ_2_F(T *_NumChildren, T *_Parents) : 
-  NumChildren(_NumChildren),
+  explicit GET_XQ_2_F(T *_Pair, T *_Parents) : 
+  Pair(_Pair),
   Parents(_Parents) {}
   inline bool operator()(uintE v) {
-    printf("NumChildren[%d] %d NumChildren[Parents[%d]] %d\n", v, NumChildren[v], v, NumChildren[Parents[v]]);
-    return NumChildren[v] != NumChildren[Parents[v]];
+    printf("Pair[%d] %d Pair[Parents[%d]] %d\n", v, Pair[v], v, Pair[Parents[v]]);
+    return Pair[v] != Pair[Parents[v]];
   }
+};
+
+
+// Honestly I'm not sure if this is terminating because 6 is root
+// or because 6 splits the cycle.
+struct H_SET_CYCLE_F {
+  int32_t *Parents;
+  int32_t *Pair;
+  int32_t *Cycles;
+  int32_t xq;
+
+  explicit H_SET_CYCLE_F(int32_t *_Parents, int32_t *_Pair, int32_t *_Cycles, int32_t _xq) : 
+  Parents(_Parents), Pair(_Pair), Cycles(_Cycles), xq(_xq) {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    if ((Parents[s] == d || Pair[s] == d) && !Cycles[d]) {
+      Cycles[d] = 1;
+      return xq != d;
+    }
+    return false;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    if ((Parents[s] == d || Pair[s] == d) && !Cycles[d]) {
+      Cycles[d] = 1;
+      return xq != d;
+    }
+    return false;
+  }
+  // Only BT to parents while the cycle hasn't converged.
+  inline bool cond(uint32_t d) { return true; }
 };

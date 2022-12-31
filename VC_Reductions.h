@@ -569,8 +569,9 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
 
   CrownReduction cr(approxGraph,
                     remaining_vertices,
-                    mmb.get_match());
-  //int32_t *parallel_cr_result = CR_with_edge_map(approxGraph, match, v);
+                    mmb.get_match(),
+                    solution);
+  //int32_t *parallel_cr_result = FindCrown(approxGraph, match, v);
   /*
   CrownReduction cr(approxGraph,
                       remaining_vertices,
