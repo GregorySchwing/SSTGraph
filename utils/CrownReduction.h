@@ -304,11 +304,13 @@ int32_t * CrownReduction<SM>::CR_with_edge_map(const SM &G, int* match, uint32_t
         // Might be unneccesary to copy.
         VertexSubset H_BT_Frontier = H_Cy;
         VertexSubset xq;
-        while (!xq.get_n()) { // loop until a cycle converges.
+        // Has to be a do while since calling get_n
+        // on an uninitted xq causes a segfault
+        do { // loop until a cycle converges.
             VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_F(Parents, NumChildren), true, 20);
             xq = G.vertexMap(H_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
             H_BT_Frontier = H_BT_Frontier_Int;
-        }
+        } while (!xq.get_n());
         // This must be Xq since all the cycles have to be the same depth.
         printf("Xq\n");
         xq.print();
@@ -324,11 +326,13 @@ int32_t * CrownReduction<SM>::CR_with_edge_map(const SM &G, int* match, uint32_t
         // Check for cycles in I
         VertexSubset I_BT_Frontier = I_Cy;
         VertexSubset xq;
-        while (!xq.get_n()) { // loop until frontier is empty
+        // Has to be a do while since calling get_n
+        // on an uninitted xq causes a segfault
+        do { // loop until a cycle converges.
             VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_F(Parents, NumChildren), true, 20);
             xq = G.vertexMap(I_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
             I_BT_Frontier = I_BT_Frontier_Int;
-        }
+        } while (!xq.get_n());
         // This must be Xq since all the cycles have to be the same depth.
         printf("Xq\n");
         xq.print();
