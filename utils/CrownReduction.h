@@ -39,14 +39,15 @@ class CrownReduction {
     CrownReduction(
                     SM &_G,
                     VertexSubset & _remainingVertices,
-                    int* _match) : 
+                    int* _match,
+                    int32_t* _Solution) : 
                     G(_G),
                     V(_G.get_rows()),
                     E(_G.get_cols()),
                     remainingVertices(_remainingVertices),
-                    match(_match)
+                    match(_match),
+                    Solution(_Solution)
     {
-        cy = (int *)malloc(V * sizeof(int));
         color = (int *)malloc(V * sizeof(int));
         par = (int *)malloc(V * sizeof(int));
 
@@ -62,6 +63,8 @@ class CrownReduction {
         }
 
         // creates Parents array, initialized to all -1, except for start
+        Cycles = (int32_t *)malloc(V * sizeof(int32_t));
+        // creates Parents array, initialized to all -1, except for start
         Parents = (int32_t *)malloc(V * sizeof(int32_t));
         // creates Depth array, initialized to all -1, except for start  
         // necessary for the cycle detecter, to identify edges to other
@@ -71,18 +74,18 @@ class CrownReduction {
         // when an edge is shared between two vertices in H or I,
         // they set each other, so they may backtrack until they converge.
         NumChildren = (int32_t *)malloc(V * sizeof(int32_t));
-        // choose first free vertex
-        // 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
-        for (int i = 0; i < V; ++i)
-            if (match[i] == -1){
-                v_0 = i;
-                break;
-            }
+
+        parallel_for(int64_t i = 0; i < V; i++) { Cycles[i] = 0; }
+
         // This is the new find crown method.
-        int32_t *parallel_cr_result = CR_with_edge_map(G, match, v_0);
+        int32_t *parallel_cr_result = FindCrown();
     }
     ~CrownReduction(){
-        free(cy);
+        free(Cycles);
+        free(Parents);
+        free(Depth);
+        free(NumChildren);
+
     }
     /*
     void FindCrown(){
@@ -144,12 +147,14 @@ class CrownReduction {
         void dfs_cycle(int u, int p, int *color, int *par, int& cyclenumber);
         void printCycles(int& cyclenumber);
         int MAlternatingCycles(int& cyclenumber);
-        int32_t * CR_with_edge_map(const SM &G, int* match, uint32_t src);
+        int32_t * FindCrown();
         SM &G;
         VertexSubset & remainingVertices;
+        int32_t* Cycles;
         int32_t* Parents;
         int32_t* Depth;
         int32_t* NumChildren;
+        int32_t* Solution;
 
         int V,E, v_0;
         int* match;
@@ -274,8 +279,17 @@ int CrownReduction<SM>::MAlternatingCycles(int& cyclenumber)
 }
 
 template <typename SM> 
-int32_t * CrownReduction<SM>::CR_with_edge_map(const SM &G, int* match, uint32_t src) {
-  int64_t start = src;
+int32_t * CrownReduction<SM>::FindCrown() {
+// choose first free vertex
+// 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
+  for (int i = 0; i < V; ++i)
+    // Unmatched and not in a previously identified 
+    // M alternating cycle
+    if (match[i] == -1 && !Cycles[i]){
+        v_0 = i;
+        break;
+    }
+  int64_t start = v_0;
   int64_t n = G.get_rows();
   int32_t i = 0;
   int32_t q;
@@ -328,6 +342,15 @@ int32_t * CrownReduction<SM>::CR_with_edge_map(const SM &G, int* match, uint32_t
             match[Parents[Parents[scalar_xq]]] = Parents[scalar_xq];
             q = q-2;
         }   
+        VertexSubset cycleStart = VertexSubset(scalar_xq, n); // creates initial frontier
+        // BFS back through the winning cycle adding vertices to Cycles
+        /*
+        do { // loop until a cycle converges.
+            VertexSubset H_BT_Frontier_Int = G.edgeMap(cycleStart, H_SET_CYCLE_F(Parents, NumChildren), true, 20);
+            xq = G.vertexMap(H_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
+            H_BT_Frontier = H_BT_Frontier_Int;
+        } while (!xq.get_n());
+        */
         // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
         // where x_q−1 ∈ I_q−1 ∩ N(NM(xq)); q = q−1;}
     } else {
