@@ -144,9 +144,6 @@ class CrownReduction {
     */
 
     private:
-        void dfs_cycle(int u, int p, int *color, int *par, int& cyclenumber);
-        void printCycles(int& cyclenumber);
-        int MAlternatingCycles(int& cyclenumber);
         int32_t * FindCrown();
         SM &G;
         VertexSubset & remainingVertices;
@@ -158,130 +155,15 @@ class CrownReduction {
 
         int V,E, v_0;
         int* match;
-        int* cy;
-        // arrays required to color the
-        // graph, store the parent of node
-        int* color;
-        int* par;
-        vector<vector<int>> cycles;
 
 };
 
-
-// Function to mark the vertex with
-// different colors for different cycles
-template <typename SM> 
-void CrownReduction<SM>::dfs_cycle(int u, int p, int *color, int *par, int& cyclenumber)
-{
-
-	// already (completely) visited vertex.
-	if (color[u] == 2) {
-		return;
-	}
-
-	// seen vertex, but was not completely visited -> cycle detected.
-	// backtrack based on parents to find the complete cycle.
-	if (color[u] == 1) {
-		vector<int> v;
-		cyclenumber++;
-		
-		int cur = p;
-		v.push_back(cur);
-
-		// backtrack the vertex which are
-		// in the current cycle thats found
-		while (cur != u) {
-			cur = par[cur];
-			v.push_back(cur);
-		}
-		cycles.push_back(v);
-		return;
-	}
-	par[u] = p;
-
-	// partially visited.
-	color[u] = 1;
-
-	// simple dfs on graph
-	for (int v : G.get_neighbors(u)) {
-
-		// if it has not been visited previously
-		if (v == par[u]) {
-			continue;
-		}
-		dfs_cycle(v, u, color, par, cyclenumber);
-	}
-
-	// completely visited.
-	color[u] = 2;
-}
-
-// Function to print the cycles
-template <typename SM> 
-void CrownReduction<SM>::printCycles(int& cyclenumber)
-{
-
-	// print all the vertex with same cycle
-	for (int i = 0; i < cyclenumber; i++) {
-		// Print the i-th cycle
-		cout << "Cycle Number " << i + 1 << ": ";
-		for (int x : cycles[i])
-			cout << x << " ";
-		cout << endl;
-	}
-}
-
-// Function to print the cycles
-template <typename SM> 
-int CrownReduction<SM>::MAlternatingCycles(int& cyclenumber)
-{
-    int mAlternatingCycle = -1;
-	// print all the vertex with same cycle
-	for (int i = 0; i < cyclenumber; i++) {
-        // Skip even cycles
-        if (cycles[i].size() % 2 == 0)
-            continue;
-
-		// check the i-th  odd cycle
-        bool startingOnAMatch = match[cycles[i][0]] > -1 && match[cycles[i][0]] == match[cycles[i][1]];
-        bool wrapAroundMatch = match[cycles[i][0]] > -1 && match[cycles[i][0]] == match[cycles[i][cycles[i].size()]];
-        bool isMAlternating = true;
-        if (startingOnAMatch){
-            printf("Cycle %d starts on a match\n", i);
-            // a a b b c c 
-            for (int j = 0; j < cycles[i].size(); j+=2) {
-                isMAlternating &= match[cycles[i][j]] > -1 && match[cycles[i][j]] == match[cycles[i][j+1]];
-                if (!isMAlternating)
-                    break;
-            }
-            if (isMAlternating){
-                mAlternatingCycle = i;
-                break;
-            }
-        } else if (wrapAroundMatch) {
-            printf("Cycle %d is a wrap-around match\n", i);
-            // a b b c c a
-            for (int j = 1; j < cycles[i].size(); j+=2) {
-                printf("match[cycles[%d][%d]] %d match[cycles[%d][%d]] %d\n", i,j,match[cycles[i][j]], i, (j+1) % cycles[i].size(), match[cycles[i][(j+1) % cycles[i].size()]]);
-                isMAlternating = match[cycles[i][j]] > -1 && match[cycles[i][j]] == match[cycles[i][(j+1) % cycles[i].size()]];
-                if (!isMAlternating)
-                    break;
-            }
-            if (isMAlternating){
-                mAlternatingCycle = i;
-                break;
-            }
-        } else {
-            // Not an M-alternating cycle
-        }
-	}
-    return mAlternatingCycle;
-}
 
 template <typename SM> 
 int32_t * CrownReduction<SM>::FindCrown() {
 // choose first free vertex
 // 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
+  v_0 = -1;
   for (int i = 0; i < V; ++i)
     // Unmatched and not in a previously identified 
     // M alternating cycle
@@ -293,7 +175,7 @@ int32_t * CrownReduction<SM>::FindCrown() {
   int64_t n = G.get_rows();
   int32_t i = 0;
   int32_t q;
-  if (n == 0) {
+  if (n == 0 || v_0 == -1) {
     return nullptr;
   }
 
@@ -361,7 +243,7 @@ int32_t * CrownReduction<SM>::FindCrown() {
             match[Parents[Parents[scalar_xq]]] = Parents[scalar_xq];
             q = q-2;
         }   
-
+        return FindCrown();
         // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
         // where x_q−1 ∈ I_q−1 ∩ N(NM(xq)); q = q−1;}
     } else {
@@ -423,6 +305,7 @@ int32_t * CrownReduction<SM>::FindCrown() {
         }   
         // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
         // where x_q−1 ∈ I_q−2 ∩ N(NM(xq)); q = q−1;}
+        return FindCrown();
     }
     // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
     //    ^ added by me    ^ to indicate we are removing some edges 
@@ -436,5 +319,5 @@ int32_t * CrownReduction<SM>::FindCrown() {
     frontier = I;
   }
   frontier.del();
-  return Parents;
+  return Solution;
 }

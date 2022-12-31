@@ -166,7 +166,7 @@ struct GET_XQ_2_F {
   Pair(_Pair),
   Parents(_Parents) {}
   inline bool operator()(uintE v) {
-    printf("Pair[%d] %d Pair[Parents[%d]] %d\n", v, Pair[v], v, Pair[Parents[v]]);
+    //printf("Pair[%d] %d Pair[Parents[%d]] %d\n", v, Pair[v], v, Pair[Parents[v]]);
     return Pair[v] != Pair[Parents[v]];
   }
 };
