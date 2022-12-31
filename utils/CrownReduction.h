@@ -67,10 +67,10 @@ class CrownReduction {
         // necessary for the cycle detecter, to identify edges to other
         // vertices at the same depth as me.
         Depth = (int32_t *)malloc(V * sizeof(int32_t));
-        // creates Pairs array, initialized to all -1
+        // creates NumChildren array, initialized to all -1
         // when an edge is shared between two vertices in H or I,
         // they set each other, so they may backtrack until they converge.
-        Pairs = (int32_t *)malloc(V * sizeof(int32_t));
+        NumChildren = (int32_t *)malloc(V * sizeof(int32_t));
         // choose first free vertex
         // 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
         for (int i = 0; i < V; ++i)
@@ -149,7 +149,7 @@ class CrownReduction {
         VertexSubset & remainingVertices;
         int32_t* Parents;
         int32_t* Depth;
-        int32_t* Pairs;
+        int32_t* NumChildren;
 
         int V,E, v_0;
         int* match;
@@ -283,7 +283,7 @@ int32_t * CrownReduction<SM>::CR_with_edge_map(const SM &G, int* match, uint32_t
   }
 
   parallel_for(int64_t i = 0; i < n; i++) { Parents[i] = -1; }
-  parallel_for(int64_t i = 0; i < n; i++) { Pairs[i] = -1; }
+  parallel_for(int64_t i = 0; i < n; i++) { NumChildren[i] = -1; }
   parallel_for(int64_t i = 0; i < n; i++) { Depth[i] = -1; }
 
   if (n == 0) {
@@ -296,42 +296,42 @@ int32_t * CrownReduction<SM>::CR_with_edge_map(const SM &G, int* match, uint32_t
     VertexSubset H = G.edgeMap(frontier, H_F(Parents, Depth), true, 20);
     printf("H\n");
     H.print();
-    VertexSubset H_Cy = G.edgeMap(H, CYCLE_DETECTION_F(Parents, Pairs, Depth), true, 20);
+    VertexSubset H_Cy = G.edgeMap(H, CYCLE_DETECTION_F(Parents, NumChildren, Depth), true, 20);
     // Check for cycles in H
     if (H_Cy.get_n()){
         printf("H_Cy\n");
         H_Cy.print();
+        // Might be unneccesary to copy.
         VertexSubset H_BT_Frontier = H_Cy;
-        while (H_Cy.get_n() == H_BT_Frontier.get_n()) { // loop until frontier is empty
-            VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_F(Parents, Pairs), true, 20);
-            //printf("H_BT_Frontier_Int\n");
-            //H_BT_Frontier_Int.print();
+        VertexSubset xq;
+        while (!xq.get_n()) { // loop until a cycle converges.
+            VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_F(Parents, NumChildren), true, 20);
+            xq = G.vertexMap(H_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
             H_BT_Frontier = H_BT_Frontier_Int;
-            //printf("H_Cy.get_n() %d H_BT_Frontier.get_n() %d\n", H_Cy.get_n(), H_BT_Frontier.get_n());
         }
         // This must be Xq since all the cycles have to be the same depth.
         printf("Xq\n");
-        H_BT_Frontier.print();
+        xq.print();
     }
     VertexSubset I = G.edgeMap(H, I_F(Parents, match, Depth), true, 20);
     printf("I\n");
     I.print();
-    VertexSubset I_Cy = G.edgeMap(I, CYCLE_DETECTION_F(Parents, Pairs, Depth), true, 20);
+    // Check for cycles in I
+    VertexSubset I_Cy = G.edgeMap(I, CYCLE_DETECTION_F(Parents, NumChildren, Depth), true, 20);
     if (I_Cy.get_n()){
         printf("I_Cy\n");
         I_Cy.print();
         // Check for cycles in I
         VertexSubset I_BT_Frontier = I_Cy;
-        while (I_Cy.get_n() == I_BT_Frontier.get_n()) { // loop until frontier is empty
-            VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_F(Parents, Pairs), true, 20);
-            //printf("I_BT_Frontier_Int\n");
-            //I_BT_Frontier_Int.print();
+        VertexSubset xq;
+        while (!xq.get_n()) { // loop until frontier is empty
+            VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_F(Parents, NumChildren), true, 20);
+            xq = G.vertexMap(I_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
             I_BT_Frontier = I_BT_Frontier_Int;
-            //printf("I_Cy.get_n() %d I_BT_Frontier.get_n() %d\n", I_Cy.get_n(), I_BT_Frontier.get_n());
         }
         // This must be Xq since all the cycles have to be the same depth.
         printf("Xq\n");
-        I_BT_Frontier.print();
+        xq.print();
     }
     // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
     //    ^ added by me    ^ to indicate we are removing some edges 
