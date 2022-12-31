@@ -73,11 +73,20 @@ struct CYCLE_DETECTION_F {
   explicit CYCLE_DETECTION_F(int32_t *_Parents, int32_t *_NumChildren, int32_t *_Depth) : 
   Parents(_Parents), NumChildren(_NumChildren), Depth(_Depth) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
-    printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
-    return Depth[d] == Depth[s];
+    //printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
+    if (Depth[d] == Depth[s]) {
+      NumChildren[d] = s;
+      return true;
+    }
+    return false;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    return Depth[d] == Depth[s];
+    //printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
+    if (Depth[d] == Depth[s]) {
+      NumChildren[d] = s;
+      return true;
+    }
+    return false;
   }
   // cond function checks if vertex has been visited yet
   // Only check for cycles amongst already visted vertices.
@@ -112,6 +121,33 @@ struct CYCLE_BT_F {
   inline bool cond(uint32_t d) { return true; }
 };
 
+// Honestly I'm not sure if this is terminating because 6 is root
+// or because 6 splits the cycle.
+struct CYCLE_BT_2_F {
+  int32_t *Parents;
+  int32_t *Pairs;
+
+  explicit CYCLE_BT_2_F(int32_t *_Parents, int32_t *_Pairs) : 
+  Parents(_Parents), Pairs(_Pairs) {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    if (Parents[s] == d) {
+      Pairs[d] = Pairs[s];
+      return true;
+    }
+    return false;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    if (Parents[s] == d) {
+      __sync_bool_compare_and_swap(&Pairs[d], -1, Pairs[s]);
+        return true;
+    }
+    return false;
+  }
+  // Only BT to parents while the cycle hasn't converged.
+  inline bool cond(uint32_t d) { return true; }
+};
+
+
 template <typename T> 
 struct GET_XQ_F {
   T *NumChildren;
@@ -119,5 +155,18 @@ struct GET_XQ_F {
   NumChildren(_NumChildren) {}
   inline bool operator()(uintE v) {
     return NumChildren[v];
+  }
+};
+
+template <typename T> 
+struct GET_XQ_2_F {
+  T *NumChildren;
+  T *Parents;
+  explicit GET_XQ_2_F(T *_NumChildren, T *_Parents) : 
+  NumChildren(_NumChildren),
+  Parents(_Parents) {}
+  inline bool operator()(uintE v) {
+    printf("NumChildren[%d] %d NumChildren[Parents[%d]] %d\n", v, NumChildren[v], v, NumChildren[Parents[v]]);
+    return NumChildren[v] != NumChildren[Parents[v]];
   }
 };

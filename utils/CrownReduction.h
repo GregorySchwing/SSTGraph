@@ -325,15 +325,21 @@ int32_t * CrownReduction<SM>::FindCrown() {
         // Has to be a do while since calling get_n
         // on an uninitted xq causes a segfault
         do { // loop until a cycle converges.
-            VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_F(Parents, NumChildren), true, 20);
-            xq = G.vertexMap(H_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
+            //VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_F(Parents, NumChildren), true, 20);
+            //xq = G.vertexMap(H_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
+            VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_2_F(Parents, NumChildren), true, 20);
+            // Important to call this on the previous frontier (I_BT_Frontier).
+            // Not the new frontier (I_BT_Frontier_Int) which tenatively contains xq.
+            // We actually find Xq's child, then get the parent outside the loop.
+            xq = G.vertexMap(H_BT_Frontier, GET_XQ_2_F(NumChildren, Parents), true); // mark visited
             H_BT_Frontier = H_BT_Frontier_Int;
         } while (!xq.get_n());
         // This must be Xq since all the cycles have to be the same depth.
-        // Consider a for loop to remove all cycles, if Xq is a set > 1.
-        printf("Xq\n");
+        printf("Xq's child\n");
         xq.print();
         el_t scalar_xq = xq.pop();
+        el_t truexq = Parents[scalar_xq];
+        printf("Xq %d\n", truexq);
         // xq is in an I level.
         // This handles the MM. Still need to remove CY from future calls
         while(q != 0){
@@ -372,14 +378,24 @@ int32_t * CrownReduction<SM>::FindCrown() {
         // Has to be a do while since calling get_n
         // on an uninitted xq causes a segfault
         do { // loop until a cycle converges.
-            VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_F(Parents, NumChildren), true, 20);
-            xq = G.vertexMap(I_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
+            VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_2_F(Parents, NumChildren), true, 20);
+            //VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_F(Parents, NumChildren), true, 20);
+            //xq = G.vertexMap(I_BT_Frontier_Int, GET_XQ_F(NumChildren), true); // mark visited
+            
+            // Important to call this on the previous frontier (I_BT_Frontier).
+            // Not the new frontier (I_BT_Frontier_Int) which tenatively contains xq.
+            // We actually find Xq's child, then get the parent outside the loop.
+            xq = G.vertexMap(I_BT_Frontier, GET_XQ_2_F(NumChildren, Parents), true); // mark visited
+
             I_BT_Frontier = I_BT_Frontier_Int;
         } while (!xq.get_n());
         // This must be Xq since all the cycles have to be the same depth.
-        printf("Xq\n");
+        printf("Xq's child\n");
         xq.print();
         el_t scalar_xq = xq.pop();
+        el_t truexq = Parents[scalar_xq];
+        printf("Xq %d\n", truexq);
+
         // xq is in an H level.
         // This handles the MM. Still need to remove CY from future calls
         while(q > 1){
