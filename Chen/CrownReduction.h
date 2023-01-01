@@ -23,6 +23,17 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+template <typename SM> 
+struct Update_Remaining_V_F {
+  const SM &G;
+
+  explicit Update_Remaining_V_F(const SM &_G) : G(_G) {}
+  inline bool operator()(uintE i) {
+    return G.getDegree(i) > 0;
+  }
+};
+
+
 struct H_F {
   int32_t *Parents;
   int32_t *Depth;

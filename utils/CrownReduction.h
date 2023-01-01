@@ -42,13 +42,15 @@ class CrownReduction {
                     SM &_G,
                     VertexSubset & _remainingVertices,
                     int* _match,
-                    int32_t* _Solution) : 
+                    int32_t* _Solution,
+                    int32_t _k = -1) : 
                     G(_G),
                     V(_G.get_rows()),
                     E(_G.get_cols()),
                     remainingVertices(_remainingVertices),
                     match(_match),
-                    Solution(_Solution)
+                    Solution(_Solution),
+                    k(_k)
     {
         // creates Parents array, initialized to all -1, except for start
         Cycles = (int32_t *)malloc(V * sizeof(int32_t));
@@ -71,7 +73,7 @@ class CrownReduction {
         edgesToRemove = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
 
         // This is the new find crown method.
-        int32_t *parallel_cr_result = FindCrown();
+        //int32_t *parallel_cr_result = FindCrown();
     }
     ~CrownReduction(){
         free(Cycles);
@@ -80,64 +82,10 @@ class CrownReduction {
         free(Pair);
         free(edgesToRemove);
     }
-    /*
-    void FindCrown(){
-        int v, i = 0, q, u_i, w_i;
-        // choose first free vertex
-        // 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
-        for (int i = 0; i < V; ++i)
-            if (match[i] == -1 && cy[i] == -1){
-                v = i;
-                break;
-            }
-        // 4. Let I0={v}, H0=N(I0), i =0;
-        std::vector<el_t> h_0 = G.get_neighbors(v);
-        std::vector<el_t> I_q;
-        I_q.push_back(v);
-        // 5. While(Hi!=∅) {
-        while(h_0.size()){
-            std::vector<el_t> n_u_q, n_w_q;
-            // 5.1 If(there is an edge e =<ui, wi> ∈M in G[Hi])then{
-            for (int i = 0; i < h_0.size(); ++i){
-                if(match[i] >= 0){
-                    q = i;
-                    u_i = i;
-                    n_u_q = G.get_neighbors(u_i);
-                    for (int j = 0; i < n_u_q.size(); ++j){
-                        if(match[i] == match[n_u_q[j]]){
-                            w_i = n_u_q[j];
-                            n_w_q = G.get_neighbors(u_i);
-                            break;
-                        }
-                    }
-                    break;
-                }
-            }
-            // While(there are different neighbors u'q, w'q 
-            // of uq, wq in Iq; respectively)
-            std::vector<el_t> u_prime_q_intermediates, w_prime_q_intermediates;
-            u_prime_q_intermediates = intersection(I_q, n_u_q);
-            w_prime_q_intermediates = intersection(I_q, n_w_q);
-
-            std::vector<el_t> u_prime_q_candidates, w_prime_q_candidates;
-            std::vector<el_t> set_diff = findDiff(u_prime_q_intermediates, w_prime_q_intermediates)
-            u_prime_q_candidates = intersection(set_diff, u_prime_q_intermediates);
-            w_prime_q_candidates = intersection(set_diff, w_prime_q_intermediates);
-            // These are all eligible u_prime_q and w_prime_q
-            if (u_prime_q_candidates.size() && w_prime_q_candidates.size()){
-                // {u_q−1=NM(u'q), w_q−1=NM(w'q), q =q−1;};
-            }
-            // Assume {xq} = N(uq) ∩ Iq = N(wq) ∩ Iq,
-            // then cy =<xq, uq, NM(uq), ..., NM(ui−1),
-            // ui, wi, NM(wi−1), ..., NM(wq), wq, xq> 
-            // is an M-alternating odd cycle;
-            std::vector<el_t> x_prime_q = intersection(set_diff, n_u_q);
-        }
-    }
-    */
+    
+    bool FindCrown();
 
     private:
-        int32_t * FindCrown();
         SM &G;
         VertexSubset & remainingVertices;
         int32_t* Cycles;
@@ -146,7 +94,7 @@ class CrownReduction {
         int32_t* Pair;
         int32_t* Solution;
 
-        int V,E, v_0;
+        int V,E, v_0, k;
         int* match;
 
         int32_t b_size; 
@@ -158,38 +106,40 @@ class CrownReduction {
 
 
 template <typename SM> 
-int32_t * CrownReduction<SM>::FindCrown() {
-// choose first free vertex
-// 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
+bool CrownReduction<SM>::FindCrown() {
+  bool vertexChanged = false;
+  int64_t n = G.get_rows();
+  int64_t remainingV = remainingVertices.get_n();
+
+  int32_t i = 0;
+  int32_t q;
+  if (n == 0 || remainingV == 0)
+    return vertexChanged;
+  // choose first free vertex
+  // 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
   v_0 = -1;
-  for (int i = 0; i < V; ++i)
+  for (int i = 0; i < V; ++i){
     // Unmatched and not in a previously identified 
     // M alternating cycle
     if (match[i] == -1 && !Cycles[i]){
         v_0 = i;
         break;
     }
-  int64_t start = v_0;
-  int64_t n = G.get_rows();
-  int32_t i = 0;
-  int32_t q;
-  if (n == 0 || v_0 == -1) {
-    return nullptr;
   }
+  int64_t start = v_0;
+  if (v_0 == -1)
+    return vertexChanged;
 
   parallel_for(int64_t i = 0; i < n; i++) { Parents[i] = -1; }
   parallel_for(int64_t i = 0; i < n; i++) { Pair[i] = -1; }
   parallel_for(int64_t i = 0; i < n; i++) { Depth[i] = -1; }
 
-  if (n == 0) {
-    return Parents;
-  }
   Parents[start] = start;
   Depth[start] = 0;
   VertexSubset frontier = VertexSubset(start, n); // creates initial frontier
   std::vector<VertexSubset> H_Set;
   std::vector<VertexSubset> I_Set;
-
+  printf("Starting at %d\n", start);
   VertexSubset H;
   VertexSubset I;
   while (frontier.non_empty()) { // loop until frontier is empty
@@ -250,7 +200,7 @@ int32_t * CrownReduction<SM>::FindCrown() {
         // where x_q−1 ∈ I_q−1 ∩ N(NM(xq)); q = q−1;}
     } else {
         ++i;
-        I = G.edgeMap(H, I_F(Parents, match, Depth), true, 20);
+        I = G.edgeMap(H, I_F(Parents, Depth, match), true, 20);
         I_Set.push_back(I);
         printf("I\n");
         I.print();
@@ -324,15 +274,33 @@ int32_t * CrownReduction<SM>::FindCrown() {
     frontier = I;
   }
   frontier.del();
-  for (auto H_i : H_Set)
+  // Add H to the solution
+  for (auto H_i : H_Set){
+    k -= H_i.get_n();
     G.vertexMap(H_i, SET_SOLUTION_H_F(Solution), false); // mark visited
-  
-  for (auto H_i : H_Set)
-    VertexSubset structionSetAndNeighborsDeleted = G.edgeMap(H_i, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &b_used, &b_size, G), true); // mark visited
-  for (auto I_i : I_Set)
-    VertexSubset structionSetAndNeighborsDeleted = G.edgeMap(I_i, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &b_used, &b_size, G), true); // mark visited
-
+  }
+  // Remove H and I from Graph.
+  VertexSubset vertices_to_delete;
+  for (auto H_i : H_Set){
+    do {
+        b_used = 0;
+        vertices_to_delete = G.edgeMap(H_i, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &b_used, &b_size, G), true); // mark visited
+        // Write phase
+        G.remove_batch(edgesToRemove, min(b_used, b_size));
+    } while(vertices_to_delete.non_empty());
+  }
+  for (auto I_i : I_Set){
+    do {
+        b_used = 0;
+        vertices_to_delete = G.edgeMap(I_i, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &b_used, &b_size, G), true); // mark visited
+        // Write phase
+        G.remove_batch(edgesToRemove, min(b_used, b_size));
+    } while(vertices_to_delete.non_empty());
+  }
+  vertexChanged = true;
   // Return Find-CROWN(G\(I∪H), M\(I∪H), CY, k −|H|), where
   // where HSet and ISet form a crown.
-  return Solution;
+  VertexSubset newRemainingVertices = G.vertexMap(remainingVertices, Update_Remaining_V_F(G), true); // mark visited
+  remainingVertices = newRemainingVertices;
+  return vertexChanged;
 }

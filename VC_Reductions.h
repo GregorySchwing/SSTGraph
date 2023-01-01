@@ -564,52 +564,50 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
 
   MaximumMatcherBlossom mmb(approxGraph,
                       remaining_vertices);
-  mmb.edmonds();
-  int * match = mmb.get_match();
-
   CrownReduction cr(approxGraph,
                     remaining_vertices,
                     mmb.get_match(),
                     solution);
-  //int32_t *parallel_cr_result = FindCrown(approxGraph, match, v);
-  /*
-  CrownReduction cr(approxGraph,
-                      remaining_vertices,
-                      mmb.get_match());
+  bool vertexChanged = false;
+  bool foundCrown = false;
+  bool foundDominating = false;
+  bool foundStruction = false;
 
-  MaximumMatcherMicali mm(approxGraph,
-                    remaining_vertices,
-                    evenlevel,
-                    oddlevel,
-                    blossom,
-                    predecessors,
-                    anomalies,
-                    unvisited_v,
-                    unused_e,
-                    unvisited_e,
-                    bridges);*/
+  // Reduce as much as possible.
+  do {
+    vertexChanged = false;
+    // Must be called before each FindCrown.
+    // It makes sense to make CrownReduction own MMB.
+    mmb.edmonds();
+    foundCrown = cr.FindCrown();
 
-  /*
-  Dominated(approxGraph,
-            remaining_vertices,
-            performStruction,
-            solution,
-            b_size,
-            edgesToRemove,
-            removeCounter);
+    foundDominating = Dominated(approxGraph,
+              remaining_vertices,
+              performStruction,
+              solution,
+              b_size,
+              edgesToRemove,
+              removeCounter);
 
-  Struction(approxGraph,
-            remaining_vertices,
-            numberAntiEdges,
-            performStruction,
-            maxVertex,
-            numStructionNeighbors,
-            b_size,
-            edgesToRemove,
-            edgesToInsert,
-            removeCounter,
-            insertCounter);
-  */
+    foundStruction = Struction(approxGraph,
+              remaining_vertices,
+              numberAntiEdges,
+              performStruction,
+              maxVertex,
+              numStructionNeighbors,
+              b_size,
+              edgesToRemove,
+              edgesToInsert,
+              removeCounter,
+              insertCounter);
+              
+    printf("foundCrown %s\n", foundCrown ? "true" : "false");
+    printf("foundDominating %s\n", foundDominating ? "true" : "false");
+    printf("foundStruction %s\n", foundStruction ? "true" : "false");
+    vertexChanged = foundCrown || foundDominating || foundStruction;
+  } while (vertexChanged);
+ 
+  // This is the AbuKhzam CR with a shoddy matching.
   /*
   GeneralFold(approxGraph,
             remaining_vertices,
@@ -762,8 +760,8 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
   while (structionSetOnly.non_empty()){
     structionPerformed = true;
     uint32_t v0 = structionSetOnly.pop();
-    printf("Perform struct operation on %lu\n", v0);
-    approxGraph.print_neighbors(v0);
+    //printf("Perform struct operation on %lu\n", v0);
+    //approxGraph.print_neighbors(v0);
     std::vector<el_t> v0_neighs = approxGraph.get_neighbors(v0);
     /*
     printf("Neighbors of %lu\n", v0);
