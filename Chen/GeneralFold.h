@@ -1,3 +1,6 @@
+#ifndef GENERAL_FOLD_H
+#define GENERAL_FOLD_H
+
 #define NR_MATCH_ROUNDS 20
 #define NR_MAX_MATCH_ROUNDS 256
 #define LEFTROTATE(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
@@ -457,3 +460,4 @@ template <typename T, typename SM> struct SET_NEIGHBORS_WITHIN_AUX_MATCHING_F {
   }
 };
 
+#endif

@@ -1,5 +1,6 @@
+#ifndef MAXIMUM_MATCHING_H
+#define MAXIMUM_MATCHING_H
 
-#pragma once
 #include "../SparseMatrix.hpp"
 #include "Match.h"
 #include <limits>
@@ -438,3 +439,4 @@ int MaximumMatcherBlossom<SM>::edmonds()
       cout<<i<<" "<<match[i]<<endl;
   return matchc;
 }
+#endif

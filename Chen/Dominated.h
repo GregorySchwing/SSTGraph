@@ -1,3 +1,5 @@
+#ifndef DOMINATED_H
+#define DOMINATED_H
 
 template <typename T, typename SM> struct SET_DOMINATED_F {
   T *dominates;
@@ -31,3 +33,4 @@ template <typename T, typename SM> struct SET_DOMINATED_F {
     return true;
   }
 };
+#endif

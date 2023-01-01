@@ -171,6 +171,16 @@ struct GET_XQ_2_F {
   }
 };
 
+template <typename T> 
+struct SET_SOLUTION_H_F {
+  T *Solution;
+  explicit SET_SOLUTION_H_F(T *_Solution) : 
+  Solution(_Solution){}
+  inline bool operator()(uintE v) {
+    //printf("Pair[%d] %d Pair[Parents[%d]] %d\n", v, Pair[v], v, Pair[Parents[v]]);
+    return Solution[v] = 1;
+  }
+};
 
 // Honestly I'm not sure if this is terminating because 6 is root
 // or because 6 splits the cycle.

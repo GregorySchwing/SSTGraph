@@ -1,3 +1,5 @@
+#ifndef STRUCTION_H
+#define STRUCTION_H
 
 template <typename T, typename SM> struct SET_ANTI_EDGES_F {
   T *numberAntiEdges;
@@ -505,3 +507,5 @@ template <typename T, typename SM> struct RESOLVE_CONFLICTS_STRUCT_F {
     return true;
   }
 };
+
+#endif

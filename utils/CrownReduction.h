@@ -4,6 +4,8 @@
 #include <vector> //std::vector
 
 #include "../Chen/CrownReduction.h"
+// For DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F
+#include "../Chen/Struction.h"
 
 template <typename T> 
 std::vector<T> intersection(std::vector<T> v1,
@@ -63,6 +65,11 @@ class CrownReduction {
 
         parallel_for(int64_t i = 0; i < V; i++) { Cycles[i] = 0; }
 
+        // creates inCover array, initialized to all -1, except for start
+        b_size = 10000; 
+        b_used = 0; 
+        edgesToRemove = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
+
         // This is the new find crown method.
         int32_t *parallel_cr_result = FindCrown();
     }
@@ -71,7 +78,7 @@ class CrownReduction {
         free(Parents);
         free(Depth);
         free(Pair);
-
+        free(edgesToRemove);
     }
     /*
     void FindCrown(){
@@ -141,6 +148,11 @@ class CrownReduction {
 
         int V,E, v_0;
         int* match;
+
+        int32_t b_size; 
+        int32_t b_used; 
+        std::tuple<el_t, el_t> *edgesToRemove;
+
 
 };
 
@@ -312,6 +324,14 @@ int32_t * CrownReduction<SM>::FindCrown() {
     frontier = I;
   }
   frontier.del();
+  for (auto H_i : H_Set)
+    G.vertexMap(H_i, SET_SOLUTION_H_F(Solution), false); // mark visited
+  
+  for (auto H_i : H_Set)
+    VertexSubset structionSetAndNeighborsDeleted = G.edgeMap(H_i, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &b_used, &b_size, G), true); // mark visited
+  for (auto I_i : I_Set)
+    VertexSubset structionSetAndNeighborsDeleted = G.edgeMap(I_i, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &b_used, &b_size, G), true); // mark visited
+
   // Return Find-CROWN(G\(I∪H), M\(I∪H), CY, k −|H|), where
   // where HSet and ISet form a crown.
   return Solution;
