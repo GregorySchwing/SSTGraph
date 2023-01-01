@@ -13,6 +13,7 @@
 
 #include "utils/CrownReduction.h"
 #include "utils/Struction.h"
+#include "utils/Dominated.h"
 
 // This code is part of the project "Ligra: A Lightweight Graph Processing
 // Framework for Shared Memory", presented at Principles and Practice of
@@ -486,6 +487,8 @@ class VC_Reductions {
     template <typename SM> int32_t* RemoveMaxApproximateMVC(SM &G);
     template <typename SM> int32_t* ChenRemoveMaxApproximateMVC(SM &G);
     //template <typename SM> int32_t* Struction(SM &G);
+      /*
+
     template <typename SM> bool Dominated(SM &approxGraph,
                                           VertexSubset &remaining_vertices,
                                           int32_t *vertexDominates,
@@ -493,7 +496,6 @@ class VC_Reductions {
                                           int32_t b_size,
                                           std::tuple<el_t, el_t> *edgesToRemove,
                                           int32_t &removeCounter);
-    /*
     template <typename SM> bool Struction(SM &approxGraph,
                                           VertexSubset &remaining_vertices,
                                           int32_t *numberAntiEdges,
@@ -572,6 +574,11 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
                     b_size,
                     edgesToRemove,
                     edgesToInsert);
+  Dominated dom(approxGraph,
+                    remaining_vertices,
+                    b_size,
+                    edgesToRemove,
+                    solution);
   bool vertexChanged = false;
   bool foundCrown = false;
   bool foundDominating = false;
@@ -584,29 +591,18 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
     // It makes sense to make CrownReduction own MMB.
     mmb.edmonds();
     foundCrown = cr.FindCrown();
-    /*
+    foundStruction = struction.FindStruction();
+    foundDominating = dom.FindDominated();
 
+    /*
     foundDominating = Dominated(approxGraph,
               remaining_vertices,
-              performStruction,
+              mmb.get_match(),
               solution,
               b_size,
               edgesToRemove,
               removeCounter);
-
-    foundStruction = Struction(approxGraph,
-              remaining_vertices,
-              numberAntiEdges,
-              performStruction,
-              maxVertex,
-              numStructionNeighbors,
-              b_size,
-              edgesToRemove,
-              edgesToInsert,
-              removeCounter,
-              insertCounter);
-      */
-              
+    */
     printf("foundCrown %s\n", foundCrown ? "true" : "false");
     printf("foundDominating %s\n", foundDominating ? "true" : "false");
     printf("foundStruction %s\n", foundStruction ? "true" : "false");
@@ -647,7 +643,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
   return solution;
 }
 
-
+/*
 template <typename SM> bool VC_Reductions::Dominated(SM &approxGraph,
                                                     VertexSubset &remaining_vertices,
                                                     int32_t *vertexDominates,
@@ -674,7 +670,7 @@ template <typename SM> bool VC_Reductions::Dominated(SM &approxGraph,
   }
   return vertexChanged;
 }
-
+*/
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
 /*
 template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,

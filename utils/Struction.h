@@ -1,4 +1,5 @@
 #include "../Chen/Struction.h"
+#define PRINT_DEF 0
 
 template <typename SM> 
 class Struction {
@@ -69,7 +70,8 @@ bool Struction<SM>::FindStruction()
   VertexSubset struction = G.edgeMap(remainingVertices, SET_ANTI_EDGES_F(numberAntiEdges, G), true, 20);
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] /= 2; }
   VertexSubset firstStructionSet = G.vertexMap(remainingVertices, SET_STRUCTION_F(numberAntiEdges, performStruction, G), true); // mark visited
-  #ifdef NDEBUG
+  #ifdef NDEBUG 
+  #if PRINT_DEF
   printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", j);
@@ -80,8 +82,10 @@ bool Struction<SM>::FindStruction()
   }
   printf("\n");
   #endif
+  #endif
   VertexSubset structionMIS = G.edgeMap(remainingVertices, SOLVE_MIS_F(performStruction, G), true, 20);
-  #ifdef NDEBUG
+  #ifdef NDEBUG 
+  #if PRINT_DEF
   printf("MIS\n");
   printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
@@ -93,8 +97,10 @@ bool Struction<SM>::FindStruction()
   }
   printf("\n");
   #endif
+  #endif
   VertexSubset structionDeg = G.edgeMap(remainingVertices, SET_NUM_STRUCTION_NEIGHBORS_F(performStruction, numStructionNeighbors, G), true, 20);
-  #ifdef NDEBUG
+  #ifdef NDEBUG 
+  #if PRINT_DEF
   printf("Degree of struct\n");
   printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
@@ -106,21 +112,26 @@ bool Struction<SM>::FindStruction()
   }
   printf("\n");
   #endif
+  #endif
   VertexSubset maxDegree = G.edgeMap(remainingVertices, SET_LARGEST_VERTEX_STRUCT_F(maxVertex, numStructionNeighbors, performStruction, G), true, 20);
-  #ifdef NDEBUG
+  #ifdef NDEBUG 
+  #if PRINT_DEF
   printf("\nmaxDegree\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", maxVertex[j]);
   }
   printf("\n");
   #endif
+  #endif
   VertexSubset fin = G.edgeMap(remainingVertices, RESOLVE_CONFLICTS_STRUCT_F(maxVertex, numStructionNeighbors, performStruction, G), true, 20);
-  #ifdef NDEBUG
+  #ifdef NDEBUG 
+  #if PRINT_DEF
   printf("\nResolve conflicts\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", performStruction[j]);
   }
   printf("\n");  
+  #endif
   #endif
   VertexSubset structionSetAndNeighbors = G.vertexMap(remainingVertices, GET_STRUCTION_SET_AND_NEIGHBORS_F(performStruction, numStructionNeighbors, G), true); // mark visited
   //VertexSubset structionSetAndNeighborsDeleted = G.edgeMap(remainingVertices, DELETE_NEIGHBORHOOD_OF_STRUCTION_VERTEX_F(performStruction, maxVertex, numStructionNeighbors, edgesToRemove, &b_used, &b_size, G), true); // mark visited
@@ -135,12 +146,14 @@ bool Struction<SM>::FindStruction()
     //printf("Perform struct operation on %lu\n", v0);
     //G.print_neighbors(v0);
     std::vector<el_t> v0_neighs = G.get_neighbors(v0);
-    #ifdef NDEBUG
+    #ifdef NDEBUG 
+  #if PRINT_DEF
     printf("Neighbors of %lu\n", v0);
     for (int i = 0; i < v0_neighs.size(); ++i)
       printf("%u \n", v0_neighs[i]);
     printf("\n");
     #endif
+  #endif
     int usedVertexCounter = 0;
     std::map<std::tuple<el_t,el_t>,el_t> antiEdgeToNodeMap;
     for (int i = 0; i < v0_neighs.size(); ++i)
