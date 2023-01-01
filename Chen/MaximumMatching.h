@@ -259,6 +259,19 @@ class MaximumMatcherMicali {
 
 };
 
+/*
+
+https://codeforces.com/blog/entry/49402
+
+GETS:
+V->number of vertices
+E->number of edges
+pair of vertices as edges (vertices are 1..V)
+
+GIVES:
+output of edmonds() is the maximum matching
+match[i] is matched pair of i (-1 if there isn't a matched pair)
+ */
 struct struct_edge{int v;struct_edge* n;};
 typedef struct_edge* edge;
 
@@ -281,11 +294,6 @@ class MaximumMatcherBlossom {
 
       inq = (bool *)malloc(V * sizeof(bool));
       inb = (bool *)malloc(V * sizeof(bool));
-
-      //ed = (bool**)malloc(V * sizeof(bool*));
-      //for (int i = 0; i < V; i++)
-      //  ed[i] = (bool*)malloc(V * sizeof(bool));
-
       
     }
     ~MaximumMatcherBlossom(){
@@ -434,9 +442,11 @@ int MaximumMatcherBlossom<SM>::edmonds()
   for (int u=0;u<V;u++)
     if (match[u]==-1)
       matchc+=augment_path(u,find_augmenting_path(u));
+  /*
   for (int i=0;i<V;i++)
     if (i<match[i])
       cout<<i<<" "<<match[i]<<endl;
+  */
   return matchc;
 }
 #endif

@@ -12,6 +12,8 @@
 #include "Chen/CrownReduction.h"
 
 #include "utils/CrownReduction.h"
+#include "utils/Struction.h"
+
 // This code is part of the project "Ligra: A Lightweight Graph Processing
 // Framework for Shared Memory", presented at Principles and Practice of
 // Parallel Programming, 2013.
@@ -491,6 +493,7 @@ class VC_Reductions {
                                           int32_t b_size,
                                           std::tuple<el_t, el_t> *edgesToRemove,
                                           int32_t &removeCounter);
+    /*
     template <typename SM> bool Struction(SM &approxGraph,
                                           VertexSubset &remaining_vertices,
                                           int32_t *numberAntiEdges,
@@ -502,6 +505,7 @@ class VC_Reductions {
                                           std::tuple<el_t, el_t> *edgesToInsert,
                                           int32_t &removeCounter,
                                           int32_t &insertCounter);
+    */
 
     template <typename SM> bool GeneralFold(SM &approxGraph,
                                           VertexSubset &remaining_vertices,
@@ -549,11 +553,6 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
 
   parallel_for(int64_t i = 0; i < n; i++) { solution[i] = 0; }
 
-  int32_t *numberAntiEdges = (int32_t *)malloc(n * sizeof(int32_t));
-  int32_t *performStruction = (int32_t *)malloc(n * sizeof(int32_t));
-  int32_t *maxVertex = (int32_t *)malloc(n * sizeof(int32_t));
-  int32_t *numStructionNeighbors = (int32_t *)malloc(n * sizeof(int32_t));
-
   int32_t b_size = 10000; 
   std::tuple<el_t, el_t> *edgesToRemove = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
   std::tuple<el_t, el_t> *edgesToInsert = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
@@ -568,6 +567,11 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
                     remaining_vertices,
                     mmb.get_match(),
                     solution);
+  Struction struction(approxGraph,
+                    remaining_vertices,
+                    b_size,
+                    edgesToRemove,
+                    edgesToInsert);
   bool vertexChanged = false;
   bool foundCrown = false;
   bool foundDominating = false;
@@ -580,6 +584,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
     // It makes sense to make CrownReduction own MMB.
     mmb.edmonds();
     foundCrown = cr.FindCrown();
+    /*
 
     foundDominating = Dominated(approxGraph,
               remaining_vertices,
@@ -600,6 +605,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
               edgesToInsert,
               removeCounter,
               insertCounter);
+      */
               
     printf("foundCrown %s\n", foundCrown ? "true" : "false");
     printf("foundDominating %s\n", foundDominating ? "true" : "false");
@@ -635,10 +641,6 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
   }
   printf("Chen solution size: %u\n", vc_count);
 
-  free(numberAntiEdges);
-  free(performStruction);
-  free(maxVertex);
-  free(numStructionNeighbors);
   free(edgesToRemove);
   free(edgesToInsert);
 
@@ -674,6 +676,7 @@ template <typename SM> bool VC_Reductions::Dominated(SM &approxGraph,
 }
 
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
+/*
 template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
                                                     VertexSubset &remaining_vertices,
                                                     int32_t *numberAntiEdges,
@@ -697,7 +700,7 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
   VertexSubset struction = approxGraph.edgeMap(remaining_vertices, SET_ANTI_EDGES_F(numberAntiEdges, approxGraph), true, 20);
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] /= 2; }
   VertexSubset firstStructionSet = approxGraph.vertexMap(remaining_vertices, SET_STRUCTION_F(numberAntiEdges, performStruction, approxGraph), true); // mark visited
-  /*
+  #ifdef NDEBUG
   printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", j);
@@ -707,9 +710,9 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
     printf("%lu ", performStruction[j]);
   }
   printf("\n");
-  */
+  #endif
   VertexSubset structionMIS = approxGraph.edgeMap(remaining_vertices, SOLVE_MIS_F(performStruction, approxGraph), true, 20);
-  /*
+  #ifdef NDEBUG
   printf("MIS\n");
   printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
@@ -720,9 +723,9 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
     printf("%lu ", performStruction[j]);
   }
   printf("\n");
-  */
+  #endif
   VertexSubset structionDeg = approxGraph.edgeMap(remaining_vertices, SET_NUM_STRUCTION_NEIGHBORS_F(performStruction, numStructionNeighbors, approxGraph), true, 20);
-  /*
+  #ifdef NDEBUG
   printf("Degree of struct\n");
   printf("Vertices\n");
   for (uint32_t j = 0; j < n; j++) {
@@ -733,23 +736,23 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
     printf("%lu ", numStructionNeighbors[j]);
   }
   printf("\n");
-  */
+  #endif
   VertexSubset maxDegree = approxGraph.edgeMap(remaining_vertices, SET_LARGEST_VERTEX_STRUCT_F(maxVertex, numStructionNeighbors, performStruction, approxGraph), true, 20);
-  /*
+  #ifdef NDEBUG
   printf("\nmaxDegree\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", maxVertex[j]);
   }
   printf("\n");
-  */
+  #endif
   VertexSubset fin = approxGraph.edgeMap(remaining_vertices, RESOLVE_CONFLICTS_STRUCT_F(maxVertex, numStructionNeighbors, performStruction, approxGraph), true, 20);
-  /*
+  #ifdef NDEBUG
   printf("\nResolve conflicts\n");
   for (uint32_t j = 0; j < n; j++) {
     printf("%lu ", performStruction[j]);
   }
   printf("\n");  
-  */
+  #endif
   VertexSubset structionSetAndNeighbors = approxGraph.vertexMap(remaining_vertices, GET_STRUCTION_SET_AND_NEIGHBORS_F(performStruction, numStructionNeighbors, approxGraph), true); // mark visited
   //VertexSubset structionSetAndNeighborsDeleted = approxGraph.edgeMap(remaining_vertices, DELETE_NEIGHBORHOOD_OF_STRUCTION_VERTEX_F(performStruction, maxVertex, numStructionNeighbors, edgesToRemove, &b_used, &b_size, approxGraph), true); // mark visited
   VertexSubset structionSetAndNeighborsDeleted = approxGraph.edgeMap(structionSetAndNeighbors, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &removeCounter, &b_size, approxGraph), true); // mark visited
@@ -763,12 +766,12 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
     //printf("Perform struct operation on %lu\n", v0);
     //approxGraph.print_neighbors(v0);
     std::vector<el_t> v0_neighs = approxGraph.get_neighbors(v0);
-    /*
+    #ifdef NDEBUG
     printf("Neighbors of %lu\n", v0);
     for (int i = 0; i < v0_neighs.size(); ++i)
       printf("%u \n", v0_neighs[i]);
     printf("\n");
-    */
+    #endif
     int usedVertexCounter = 0;
     std::map<std::tuple<el_t,el_t>,el_t> antiEdgeToNodeMap;
     for (int i = 0; i < v0_neighs.size(); ++i)
@@ -899,7 +902,6 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
     }
   }
 
-
   //printf("\nBefore batch changes\n");
   //approxGraph.print_arrays();
   approxGraph.remove_batch(edgesToRemove, min(removeCounter, b_size));
@@ -909,6 +911,7 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
 
   return structionPerformed;
 }
+*/
 
 
 
