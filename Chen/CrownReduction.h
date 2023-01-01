@@ -33,6 +33,20 @@ struct Update_Remaining_V_F {
   }
 };
 
+template <typename T, typename SM> 
+struct GET_UNMATCHED_F {
+  const SM &G;
+  int *match;
+  T *Cycles;
+  explicit GET_UNMATCHED_F(int *_match, T *_Cycles, const SM &_G) : 
+  G(_G),
+  match(_match),
+  Cycles(_Cycles) {}
+  inline bool operator()(uintE i) {
+    return match[i] == -1 && !Cycles[i];
+  }
+};
+
 
 struct H_F {
   int32_t *Parents;

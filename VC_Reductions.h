@@ -900,12 +900,12 @@ template <typename SM> bool VC_Reductions::Struction(SM &approxGraph,
   }
 
 
-  printf("\nBefore batch changes\n");
-  approxGraph.print_arrays();
+  //printf("\nBefore batch changes\n");
+  //approxGraph.print_arrays();
   approxGraph.remove_batch(edgesToRemove, min(removeCounter, b_size));
   approxGraph.insert_batch(edgesToInsert, min(insertCounter, b_size));
-  printf("\nAfter batch changes\n");
-  approxGraph.print_arrays();
+  //printf("\nAfter batch changes\n");
+  //approxGraph.print_arrays();
 
   return structionPerformed;
 }
