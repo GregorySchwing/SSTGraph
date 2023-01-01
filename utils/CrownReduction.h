@@ -48,20 +48,6 @@ class CrownReduction {
                     match(_match),
                     Solution(_Solution)
     {
-        color = (int *)malloc(V * sizeof(int));
-        par = (int *)malloc(V * sizeof(int));
-
-        // store the numbers of cycle
-        int cyclenumber = 0;
-        // call DFS to mark the cycles
-	    dfs_cycle(1, 0, color, par, cyclenumber);
-        // function to print the cycles
-        printCycles(cyclenumber);
-        int cy = MAlternatingCycles(cyclenumber);
-        if (cy > -1){
-            printf("Cycle %d is an M-alt cycle\n", cy);
-        }
-
         // creates Parents array, initialized to all -1, except for start
         Cycles = (int32_t *)malloc(V * sizeof(int32_t));
         // creates Parents array, initialized to all -1, except for start
@@ -189,10 +175,14 @@ int32_t * CrownReduction<SM>::FindCrown() {
   Parents[start] = start;
   Depth[start] = 0;
   VertexSubset frontier = VertexSubset(start, n); // creates initial frontier
+  std::vector<VertexSubset> H_Set;
+  std::vector<VertexSubset> I_Set;
+
   VertexSubset H;
   VertexSubset I;
   while (frontier.non_empty()) { // loop until frontier is empty
     H = G.edgeMap(frontier, H_F(Parents, Depth), true, 20);
+    H_Set.push_back(H);
     printf("H\n");
     H.print();
     VertexSubset H_Cy = G.edgeMap(H, CYCLE_DETECTION_F(Parents, Pair, Depth), true, 20);
@@ -249,6 +239,7 @@ int32_t * CrownReduction<SM>::FindCrown() {
     } else {
         ++i;
         I = G.edgeMap(H, I_F(Parents, match, Depth), true, 20);
+        I_Set.push_back(I);
         printf("I\n");
         I.print();
     }
@@ -306,6 +297,8 @@ int32_t * CrownReduction<SM>::FindCrown() {
         // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
         // where x_q−1 ∈ I_q−2 ∩ N(NM(xq)); q = q−1;}
         return FindCrown();
+    } else {
+        I_Set.push_back(I);
     }
     // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
     //    ^ added by me    ^ to indicate we are removing some edges 
@@ -319,5 +312,7 @@ int32_t * CrownReduction<SM>::FindCrown() {
     frontier = I;
   }
   frontier.del();
+  // Return Find-CROWN(G\(I∪H), M\(I∪H), CY, k −|H|), where
+  // where HSet and ISet form a crown.
   return Solution;
 }
