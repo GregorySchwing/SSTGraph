@@ -14,6 +14,7 @@
 #include "utils/CrownReduction.h"
 #include "utils/Struction.h"
 #include "utils/Dominated.h"
+#include "utils/MaxDegree.h"
 
 // This code is part of the project "Ligra: A Lightweight Graph Processing
 // Framework for Shared Memory", presented at Principles and Practice of
@@ -560,7 +561,11 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
   std::tuple<el_t, el_t> *edgesToInsert = (std::tuple<el_t, el_t> *)malloc(b_size * sizeof(std::tuple<el_t, el_t>));
   int32_t removeCounter = 0;
   int32_t insertCounter = 0;
-
+  bool vertexChanged = false;
+  bool foundCrown = false;
+  bool foundDominating = false;
+  bool foundStruction = false;
+	bool hasEdges = true;
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
 
   MaximumMatcherBlossom mmb(approxGraph,
@@ -579,36 +584,33 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
                     b_size,
                     edgesToRemove,
                     solution);
-  bool vertexChanged = false;
-  bool foundCrown = false;
-  bool foundDominating = false;
-  bool foundStruction = false;
+  MaxDegree md(approxGraph,
+                    remaining_vertices,
+                    b_size,
+                    edgesToRemove,
+                    solution,
+                    hasEdges);
 
-  // Reduce as much as possible.
-  do {
-    vertexChanged = false;
-    // Must be called before each FindCrown.
-    // It makes sense to make CrownReduction own MMB.
-    mmb.edmonds();
-    foundCrown = cr.FindCrown();
-    foundStruction = struction.FindStruction();
-    foundDominating = dom.FindDominated();
+	while (hasEdges)
+	{
+    // Reduce as much as possible.
+    do {
+      vertexChanged = false;
+      // Must be called before each FindCrown.
+      // It makes sense to make CrownReduction own MMB.
+      mmb.edmonds();
+      foundCrown = cr.FindCrown();
+      foundStruction = struction.FindStruction();
+      foundDominating = dom.FindDominated();
 
-    /*
-    foundDominating = Dominated(approxGraph,
-              remaining_vertices,
-              mmb.get_match(),
-              solution,
-              b_size,
-              edgesToRemove,
-              removeCounter);
-    */
-    printf("foundCrown %s\n", foundCrown ? "true" : "false");
-    printf("foundDominating %s\n", foundDominating ? "true" : "false");
-    printf("foundStruction %s\n", foundStruction ? "true" : "false");
-    vertexChanged = foundCrown || foundDominating || foundStruction;
-  } while (vertexChanged);
- 
+      printf("foundCrown %s\n", foundCrown ? "true" : "false");
+      printf("foundDominating %s\n", foundDominating ? "true" : "false");
+      printf("foundStruction %s\n", foundStruction ? "true" : "false");
+      vertexChanged = foundCrown || foundDominating || foundStruction;
+    } while (vertexChanged);
+  
+    md.FindMaxDegree();
+  }
   // This is the AbuKhzam CR with a shoddy matching.
   /*
   GeneralFold(approxGraph,
