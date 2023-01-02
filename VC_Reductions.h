@@ -597,8 +597,12 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
 
 	while (hasEdges)
 	{
+    VertexSubset newRemainingVertices = approxGraph.vertexMap(remaining_vertices, Update_Remaining_V_F(approxGraph), true); // mark visited
+    remaining_vertices = newRemainingVertices;
     // Reduce as much as possible.
     do {
+      VertexSubset newRemainingVertices = G.vertexMap(remaining_vertices, Update_Remaining_V_F(approxGraph), true); // mark visited
+      remaining_vertices = newRemainingVertices;
       vertexChanged = false;
       // Must be called before each FindCrown.
       // It makes sense to make CrownReduction own MMB.
@@ -613,6 +617,8 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
       vertexChanged = foundCrown || foundDominating || foundStruction;
     } while (vertexChanged);
   
+    newRemainingVertices = G.vertexMap(remaining_vertices, Update_Remaining_V_F(approxGraph), true); // mark visited
+    remaining_vertices = newRemainingVertices;
     foundMax = md.FindMaxDegree();
     printf("foundMax %s\n", foundMax ? "true" : "false");
     hasEdges = foundMax;
