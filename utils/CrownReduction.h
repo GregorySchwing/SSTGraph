@@ -190,13 +190,29 @@ bool CrownReduction<SM>::FindCrown() {
         printf("\n");
         // xq is in an I level.
         // This handles the MM. Still need to remove CY from future calls
-        while(q != 0){
-            printf("Stuck in root travel H q %d xq %d\n", q, scalar_xq);
-            match[scalar_xq] = -1;
-            match[Parents[scalar_xq]] = Parents[Parents[scalar_xq]];
-            match[Parents[Parents[scalar_xq]]] = Parents[scalar_xq];
-            --q;
-            scalar_xq = Parents[scalar_xq];
+        // The point is just to flip the parity of the edges 
+        // that are in the matching from xq,child[xq] to start
+        el_t counter = 0;            
+        while(scalar_xq != start){
+            // Only on first time do I just turn myself off.
+            if (!counter){
+                match[scalar_xq] = -1;
+                counter++;
+                scalar_xq = Parents[scalar_xq];
+            // Only on odd counters do I match with parent.
+            } else {
+                if (counter % 2 == 1){
+                    el_t parent = Parents[scalar_xq];  
+                    match[scalar_xq] = parent;
+                    match[parent] = scalar_xq;
+                    scalar_xq = parent;   
+                    counter++; 
+                } else {
+                    counter++; 
+                    el_t parent = Parents[scalar_xq]; 
+                    scalar_xq = parent;   
+                }
+            }
         }   
         return FindCrown();
         // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
@@ -251,16 +267,32 @@ bool CrownReduction<SM>::FindCrown() {
         for (int i = 0; i < V; ++i)
             printf("%d ", Cycles[i]);
         printf("\n");
-        // xq is in an H level.
+        // xq is in an I level.
         // This handles the MM. Still need to remove CY from future calls
-        while(q > 1){
-            printf("Stuck in root travel I q %d xq %d\n", q, scalar_xq);
-            match[scalar_xq] = -1;
-            match[Parents[scalar_xq]] = Parents[Parents[scalar_xq]];
-            match[Parents[Parents[scalar_xq]]] = Parents[scalar_xq];
-            --q;
-            scalar_xq = Parents[scalar_xq];
-        }
+        // The point is just to flip the parity of the edges 
+        // that are in the matching from xq,child[xq] to start
+        el_t counter = 0;            
+        while(scalar_xq != start){
+            // Only on first time do I just turn myself off.
+            if (!counter){
+                match[scalar_xq] = -1;
+                counter++;
+                scalar_xq = Parents[scalar_xq];
+            // Only on odd counters do I match with parent.
+            } else {
+                if (counter % 2 == 1){
+                    el_t parent = Parents[scalar_xq];  
+                    match[scalar_xq] = parent;
+                    match[parent] = scalar_xq;
+                    scalar_xq = parent;   
+                    counter++; 
+                } else {
+                    counter++; 
+                    el_t parent = Parents[scalar_xq]; 
+                    scalar_xq = parent;   
+                }
+            }
+        }   
         // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
         // where x_q−1 ∈ I_q−2 ∩ N(NM(xq)); q = q−1;}
         return FindCrown();
