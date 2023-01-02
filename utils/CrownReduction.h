@@ -186,6 +186,7 @@ bool CrownReduction<SM>::FindCrown() {
         // xq is in an I level.
         // This handles the MM. Still need to remove CY from future calls
         while(q != 0){
+            printf("Stuck in root travel H q %d\n", q);
             match[scalar_xq] = -1;
             match[Parents[scalar_xq]] = Parents[Parents[scalar_xq]];
             match[Parents[Parents[scalar_xq]]] = Parents[scalar_xq];
@@ -247,6 +248,7 @@ bool CrownReduction<SM>::FindCrown() {
         // xq is in an H level.
         // This handles the MM. Still need to remove CY from future calls
         while(q > 1){
+            printf("Stuck in root travel I q %d\n", q);
             match[scalar_xq] = -1;
             match[Parents[scalar_xq]] = Parents[Parents[scalar_xq]];
             match[Parents[Parents[scalar_xq]]] = Parents[scalar_xq];
