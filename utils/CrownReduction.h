@@ -165,8 +165,11 @@ bool CrownReduction<SM>::FindCrown() {
         printf("Xq's child\n");
         xq.print();
         el_t scalar_xq = xq.pop();
+        printf("scalar_xq %u\n", scalar_xq);
         el_t cycleTail = Pair[scalar_xq];
+        printf("cycleTail %u\n", cycleTail);
         el_t truexq = Parents[scalar_xq];
+        printf("truexq %u\n", truexq);
 
         printf("Xq %d cycleTail %d\n", truexq, cycleTail);
         VertexSubset cycleStart = VertexSubset(cycleTail, n); // creates initial frontier
