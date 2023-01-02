@@ -82,7 +82,7 @@ class CrownReduction {
         free(Pair);
         free(edgesToRemove);
     }
-    
+    void ResetCycles();
     bool FindCrown();
 
     private:
@@ -104,6 +104,11 @@ class CrownReduction {
 
 };
 
+
+template <typename SM> 
+void CrownReduction<SM>::ResetCycles() {
+    parallel_for(int64_t i = 0; i < V; i++) { Cycles[i] = 0; }
+}
 
 template <typename SM> 
 bool CrownReduction<SM>::FindCrown() {

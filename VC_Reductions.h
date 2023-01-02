@@ -607,6 +607,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
       // Must be called before each FindCrown.
       // It makes sense to make CrownReduction own MMB.
       mmb.edmonds();
+      cr.ResetCycles();
       foundCrown = cr.FindCrown();
       //foundStruction = struction.FindStruction();
       foundDominating = dom.FindDominated();
