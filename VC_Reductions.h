@@ -604,7 +604,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
       // It makes sense to make CrownReduction own MMB.
       //mmb.edmonds();
       //foundCrown = cr.FindCrown();
-      foundStruction = struction.FindStruction();
+      //foundStruction = struction.FindStruction();
       foundDominating = dom.FindDominated();
 
       printf("foundCrown %s\n", foundCrown ? "true" : "false");

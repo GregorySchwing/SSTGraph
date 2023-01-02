@@ -295,11 +295,15 @@ bool Struction<SM>::FindStruction()
     }
   }
 
-  //printf("\nBefore batch changes\n");
   //G.print_arrays();
-  G.remove_batch(edgesToRemove, min(removeCounter, b_size));
-  G.insert_batch(edgesToInsert, min(insertCounter, b_size));
-  //printf("\nAfter batch changes\n");
+  if (structionPerformed){
+    printf("\nBefore batch changes\n");
+    G.print_statistics();
+    G.remove_batch(edgesToRemove, min(removeCounter, b_size));
+    G.insert_batch(edgesToInsert, min(insertCounter, b_size));
+    printf("\nAfter batch changes\n");
+    G.print_statistics();
+  }
   //G.print_arrays();
   // TODO :double check this
   // This is questionable.
@@ -308,6 +312,8 @@ bool Struction<SM>::FindStruction()
     minimum += (startingSetOfVertices.get_n() - endingSetOfVertices.get_n());
     remainingVertices = endingSetOfVertices;
   }
+  printf("After updating remainingVertices\n");
+  G.print_statistics();
   return structionPerformed;
 
 }

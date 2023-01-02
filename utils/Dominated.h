@@ -49,7 +49,7 @@ bool Dominated<SM>::FindDominated()
 {
   int64_t n = G.get_rows(); 
   parallel_for(int64_t i = 0; i < n; i++) { vertexDominates[i] = 0; }
-  VertexSubset dominates = G.edgeMap(remainingVertices, SET_DOMINATED_F(vertexDominates, G), true, 20);
+  VertexSubset dominates = G.edgeMap(remainingVertices, SET_DOMINATED_F(vertexDominates, Solution, G), true, 20);
   bool vertexChanged = false;
   VertexSubset vertices_to_delete;
   while (dominates.non_empty()) { // loop until no dominates remain
@@ -63,7 +63,7 @@ bool Dominated<SM>::FindDominated()
 
     // Write phase
     G.remove_batch(edgesToRemove, min(removeCounter, b_size));
-    dominates = G.edgeMap(remainingVertices, SET_DOMINATED_F(vertexDominates, G), true, 20);
+    dominates = G.edgeMap(remainingVertices, SET_DOMINATED_F(vertexDominates, Solution, G), true, 20);
   }
   return vertexChanged;
 }

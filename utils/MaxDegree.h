@@ -54,9 +54,12 @@ bool MaxDegree<SM>::FindMaxDegree()
     }
     for (unsigned int i = 0; i < V; i++)
     {
-        printf("%d \n", i);
-        printf("%d \n", remainingVertices.get_n());
-        printf("%d \n", G.getDegree(i));
+        //printf("%d \n", i);
+        //printf("%d \n", remainingVertices.get_n());
+        //if ( remainingVertices.get_n() == 159){
+        //    G.print_statistics();
+        //    G.print_arrays();
+        //}
         if (G.getDegree(i) > maxD)
         {
             maxV = i;
