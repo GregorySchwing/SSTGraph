@@ -9,14 +9,16 @@ class Struction {
                     VertexSubset & _remainingVertices,
                     int32_t _b_size,
                     std::tuple<el_t, el_t> *_edgesToRemove,
-                    std::tuple<el_t, el_t> *_edgesToInsert) : 
+                    std::tuple<el_t, el_t> *_edgesToInsert,
+                    int32_t _minimum) : 
                     G(_G),
                     V(_G.get_rows()),
                     E(_G.get_cols()),
                     remainingVertices(_remainingVertices),
                     b_size(_b_size),
                     edgesToRemove(_edgesToRemove),
-                    edgesToInsert(_edgesToInsert)
+                    edgesToInsert(_edgesToInsert),
+                    minimum(_minimum)
     {
       numberAntiEdges = (int32_t *)malloc(V * sizeof(int32_t));
       performStruction = (int32_t *)malloc(V * sizeof(int32_t));
@@ -51,6 +53,8 @@ class Struction {
         int32_t b_size;
         std::tuple<el_t, el_t> *edgesToRemove;
         std::tuple<el_t, el_t> *edgesToInsert;
+
+        int32_t &minimum;
 };
 
 template <typename SM> 
@@ -60,6 +64,11 @@ bool Struction<SM>::FindStruction()
   insertCounter = 0;
   bool structionPerformed = false;
   int64_t n = G.get_rows(); 
+
+  // For updating minimum
+  VertexSubset startingSetOfVertices;
+  VertexSubset endingSetOfVertices;
+
 
   parallel_for(int64_t i = 0; i < n; i++) { numberAntiEdges[i] = 0; }
   parallel_for(int64_t i = 0; i < n; i++) { performStruction[i] = 0; }
@@ -138,7 +147,9 @@ bool Struction<SM>::FindStruction()
   VertexSubset structionSetAndNeighborsDeleted = G.edgeMap(structionSetAndNeighbors, DELETE_ALL_VERTICES_IN_VERTEX_SUBSET_F(edgesToRemove, &removeCounter, &b_size, G), true); // mark visited
 
   VertexSubset structionSetOnly = G.vertexMap(remainingVertices, GET_STRUCTION_SET_F(performStruction, numStructionNeighbors, G), true); // mark visited
-
+  if (structionSetOnly.non_empty()){
+    startingSetOfVertices = G.vertexMap(remainingVertices, Update_Remaining_V_F(G), true); // mark visited
+  }
   // Assuming all the insertions fit in one batch, this should complete the struction op.
   while (structionSetOnly.non_empty()){
     structionPerformed = true;
@@ -290,7 +301,13 @@ bool Struction<SM>::FindStruction()
   G.insert_batch(edgesToInsert, min(insertCounter, b_size));
   //printf("\nAfter batch changes\n");
   //G.print_arrays();
-
+  // TODO :double check this
+  // This is questionable.
+  if (structionPerformed){
+    endingSetOfVertices = G.vertexMap(remainingVertices, Update_Remaining_V_F(G), true); // mark visited
+    minimum += (startingSetOfVertices.get_n() - endingSetOfVertices.get_n());
+    remainingVertices = endingSetOfVertices;
+  }
   return structionPerformed;
 
 }

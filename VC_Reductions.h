@@ -549,6 +549,8 @@ template <typename SM> bool FindCrown(SM &approxGraph,
 //template <typename SM> int32_t VC_Reductions::RemoveMaxApproximateMVC(SM &G){
 template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G){
   SparseMatrixV<true, bool> approxGraph(G);
+  int32_t minimum = 0; 
+
   int64_t n = approxGraph.get_rows(); 
   int64_t e = approxGraph.get_cols(); 
 
@@ -565,6 +567,8 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
   bool foundCrown = false;
   bool foundDominating = false;
   bool foundStruction = false;
+  bool foundMax = false;
+
 	bool hasEdges = true;
   VertexSubset remaining_vertices = VertexSubset(0, n, true); // initial set contains all vertices
 
@@ -578,7 +582,8 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
                     remaining_vertices,
                     b_size,
                     edgesToRemove,
-                    edgesToInsert);
+                    edgesToInsert,
+                    minimum);
   Dominated dom(approxGraph,
                     remaining_vertices,
                     b_size,
@@ -588,8 +593,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
                     remaining_vertices,
                     b_size,
                     edgesToRemove,
-                    solution,
-                    hasEdges);
+                    solution);
 
 	while (hasEdges)
 	{
@@ -598,8 +602,8 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
       vertexChanged = false;
       // Must be called before each FindCrown.
       // It makes sense to make CrownReduction own MMB.
-      mmb.edmonds();
-      foundCrown = cr.FindCrown();
+      //mmb.edmonds();
+      //foundCrown = cr.FindCrown();
       foundStruction = struction.FindStruction();
       foundDominating = dom.FindDominated();
 
@@ -609,7 +613,9 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
       vertexChanged = foundCrown || foundDominating || foundStruction;
     } while (vertexChanged);
   
-    md.FindMaxDegree();
+    foundMax = md.FindMaxDegree();
+    printf("foundMax %s\n", foundMax ? "true" : "false");
+    hasEdges = foundMax;
   }
   // This is the AbuKhzam CR with a shoddy matching.
   /*
