@@ -47,6 +47,31 @@ struct GET_UNMATCHED_F {
   }
 };
 
+template <typename T, typename SM> 
+struct GET_START_F {
+  const SM &G;
+  int *match;
+  T *Cycles;
+  explicit GET_START_F(int *_match, T *_Cycles, const SM &_G) : 
+  G(_G),
+  match(_match),
+  Cycles(_Cycles) {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    if (Cycles[s] || match[s])
+      return false;
+    // has at least 1 neighbor to a noncycle vertex.
+    return !Cycles[d];
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    if (Cycles[s] || match[s])
+      return false;
+    // has at least 1 neighbor to a noncycle vertex.
+    return !Cycles[d];
+  }
+  // cond function checks if vertex has been visited yet
+  inline bool cond(uint32_t d) { return true; }
+};
+
 
 struct H_F {
   int32_t *Parents;

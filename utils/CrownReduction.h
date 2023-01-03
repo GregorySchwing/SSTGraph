@@ -125,11 +125,13 @@ bool CrownReduction<SM>::FindCrown() {
     return vertexChanged;
   // choose first free vertex
   // 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
-  VertexSubset unmatchedVertices = G.vertexMap(remainingVertices, GET_UNMATCHED_F(match, Cycles, G), true); // mark visited
-  if (!unmatchedVertices.get_n())
+  // VertexSubset eligibleStartVertices = G.vertexMap(remainingVertices, GET_UNMATCHED_F(match, Cycles, G), true); // mark visited
+  VertexSubset eligibleStartVertices = G.edgeMap(remainingVertices, GET_START_F(match, Cycles, G), true, 20);
+
+  if (!eligibleStartVertices.get_n())
     return vertexChanged;
 
-  int64_t start = unmatchedVertices.pop();
+  int64_t start = eligibleStartVertices.pop();
 
   parallel_for(int64_t i = 0; i < n; i++) { Parents[i] = -1; }
   parallel_for(int64_t i = 0; i < n; i++) { Pair[i] = -1; }
