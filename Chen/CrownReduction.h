@@ -108,6 +108,8 @@ struct I_F {
   Parents(_Parents), Cycles(_Cycles),
   Depth(_Depth), match(_match) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
+    if (match[s] != match[d])
+      return false;
     if (Cycles[d])
       return false;
     if (Parents[d] == -1) {
@@ -118,6 +120,8 @@ struct I_F {
     return false;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    if (match[s] != match[d])
+      return false;
     if (Cycles[d])
       return false;
     return __sync_bool_compare_and_swap(&Parents[d], -1, s) && 
@@ -125,7 +129,7 @@ struct I_F {
   }
   // cond function checks if vertex has been visited yet
   // also destination should be in M.
-  inline bool cond(uint32_t d) { return (Parents[d] == -1  && match[d] != -1); }
+  inline bool cond(uint32_t d) { return (Parents[d] == -1); }
 };
 
 struct CYCLE_DETECTION_F {
@@ -160,6 +164,43 @@ struct CYCLE_DETECTION_F {
   // Only check for cycles amongst already visted vertices.
   inline bool cond(uint32_t d) { return (Parents[d] != -1); }
 };
+
+
+struct CYCLE_DETECTION_H_F {
+  int32_t *Parents;
+  int32_t *lock;
+  int32_t *Depth;
+  int *match;
+  int32_t *CycleEdge_u;
+  int32_t *CycleEdge_v;
+
+  explicit CYCLE_DETECTION_H_F(int32_t *_Parents, int32_t *_lock, 
+  int32_t *_Depth, int *_match, 
+  int32_t *_CycleEdge_u, int32_t *_CycleEdge_v) : 
+  Parents(_Parents), lock(_lock), Depth(_Depth), match(_match), CycleEdge_u(_CycleEdge_u), CycleEdge_v(_CycleEdge_v) {}
+  inline bool update(uint32_t s, uint32_t d) { // Update
+    //printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
+    if (match[d] == match[s] && Depth[d] == Depth[s] && __sync_bool_compare_and_swap(lock, -1, 0)){
+      *CycleEdge_u = s;
+      *CycleEdge_v = d;
+      return true;
+    }
+    return false;
+  }
+  inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    //printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
+    if (match[d] == match[s] && Depth[d] == Depth[s] && __sync_bool_compare_and_swap(lock, -1, 0)){
+      *CycleEdge_u = s;
+      *CycleEdge_v = d;
+      return true;
+    }
+    return false;
+  }
+  // cond function checks if vertex has been visited yet
+  // Only check for cycles amongst already visted vertices.
+  inline bool cond(uint32_t d) { return (Parents[d] != -1); }
+};
+
 
 // Honestly I'm not sure if this is terminating because 6 is root
 // or because 6 splits the cycle.

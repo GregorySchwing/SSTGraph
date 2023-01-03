@@ -209,18 +209,23 @@ bool CrownReduction<SM>::FindCrown() {
     lock = -1;
     CycleEdge_u = -1;
     CycleEdge_v = -1;
-    VertexSubset H_Cy = G.edgeMap(H, CYCLE_DETECTION_F(Parents, &lock, Depth, &CycleEdge_u, &CycleEdge_v), true, 20);
+    VertexSubset H_Cy = G.edgeMap(H, CYCLE_DETECTION_H_F(Parents, &lock, Depth, match, &CycleEdge_u, &CycleEdge_v), true, 20);
     // Check for cycles in H
     if (H_Cy.get_n()){
         q = i;
         printf("H_Cy\n");
         H_Cy.print();
         printf("cycle edge %u %u\n", CycleEdge_u, CycleEdge_v);
+        printf("cycle edge match[%u] %u match[%u] %u\n", CycleEdge_u, match[CycleEdge_u], CycleEdge_v, match[CycleEdge_v]);
+
         Cycles[CycleEdge_u] = 1;
         Cycles[CycleEdge_v] = 1;
         while (Parents[CycleEdge_u] != Parents[CycleEdge_v]){
             printf("%u -> %u\n", CycleEdge_u, Parents[CycleEdge_u]);
+            printf("%u match[%u] -> %u match[%u]\n", CycleEdge_u, match[CycleEdge_u], Parents[CycleEdge_u], match[Parents[CycleEdge_u]]);
+
             printf("%u -> %u\n", CycleEdge_v, Parents[CycleEdge_v]);
+            printf("%u match[%u] -> %u match[%u]\n", CycleEdge_v, match[CycleEdge_v], Parents[CycleEdge_v], match[Parents[CycleEdge_v]]);
 
             CycleEdge_u = Parents[CycleEdge_u];
             CycleEdge_v = Parents[CycleEdge_v];
@@ -281,11 +286,16 @@ bool CrownReduction<SM>::FindCrown() {
         printf("I_Cy\n");
         I_Cy.print();
         printf("cycle edge %u %u\n", CycleEdge_u, CycleEdge_v);
+        printf("cycle edge match[%u] %u match[%u] %u\n", CycleEdge_u, match[CycleEdge_u], CycleEdge_v, match[CycleEdge_v]);
+
         Cycles[CycleEdge_u] = 1;
         Cycles[CycleEdge_v] = 1;
         while (Parents[CycleEdge_u] != Parents[CycleEdge_v]){
             printf("%u -> %u\n", CycleEdge_u, Parents[CycleEdge_u]);
+            printf("%u match[%u] -> %u match[%u]\n", CycleEdge_u, match[CycleEdge_u], Parents[CycleEdge_u], match[Parents[CycleEdge_u]]);
+
             printf("%u -> %u\n", CycleEdge_v, Parents[CycleEdge_v]);
+            printf("%u match[%u] -> %u match[%u]\n", CycleEdge_v, match[CycleEdge_v], Parents[CycleEdge_v], match[Parents[CycleEdge_v]]);
 
             CycleEdge_u = Parents[CycleEdge_u];
             CycleEdge_v = Parents[CycleEdge_v];
