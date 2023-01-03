@@ -92,23 +92,28 @@ struct I_F {
 
 struct CYCLE_DETECTION_F {
   int32_t *Parents;
-  int32_t *Pair;
+  int32_t *lock;
   int32_t *Depth;
+  int32_t *CycleEdge_u;
+  int32_t *CycleEdge_v;
 
-  explicit CYCLE_DETECTION_F(int32_t *_Parents, int32_t *_Pair, int32_t *_Depth) : 
-  Parents(_Parents), Pair(_Pair), Depth(_Depth) {}
+  explicit CYCLE_DETECTION_F(int32_t *_Parents, int32_t *_lock, 
+  int32_t *_Depth, int32_t *_CycleEdge_u, int32_t *_CycleEdge_v) : 
+  Parents(_Parents), lock(_lock), Depth(_Depth), CycleEdge_u(_CycleEdge_u), CycleEdge_v(_CycleEdge_v) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
     //printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
-    if (Depth[d] == Depth[s]) {
-      Pair[d] = s;
+    if (Depth[d] == Depth[s] && __sync_bool_compare_and_swap(lock, -1, 0)){
+      *CycleEdge_u = s;
+      *CycleEdge_v = d;
       return true;
     }
     return false;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     //printf("%d depth %d %d depth %d\n",s, Depth[s], d, Depth[d]);
-    if (Depth[d] == Depth[s]) {
-      Pair[d] = s;
+    if (Depth[d] == Depth[s] && __sync_bool_compare_and_swap(lock, -1, 0)){
+      *CycleEdge_u = s;
+      *CycleEdge_v = d;
       return true;
     }
     return false;

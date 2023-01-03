@@ -118,6 +118,9 @@ bool CrownReduction<SM>::FindCrown() {
 
   int32_t i = 0;
   int32_t q;
+  int32_t lock = -1;
+  int32_t CycleEdge_u;
+  int32_t CycleEdge_v;
   if (n == 0 || remainingV == 0)
     return vertexChanged;
   // choose first free vertex
@@ -145,7 +148,10 @@ bool CrownReduction<SM>::FindCrown() {
     H_Set.push_back(H);
     printf("H\n");
     H.print();
-    VertexSubset H_Cy = G.edgeMap(H, CYCLE_DETECTION_F(Parents, Pair, Depth), true, 20);
+    lock = -1;
+    CycleEdge_u = -1;
+    CycleEdge_v = -1;
+    VertexSubset H_Cy = G.edgeMap(H, CYCLE_DETECTION_F(Parents, &lock, Depth, &CycleEdge_u, &CycleEdge_v), true, 20);
     // Check for cycles in H
     if (H_Cy.get_n()){
         q = i;
@@ -175,15 +181,20 @@ bool CrownReduction<SM>::FindCrown() {
         printf("cycleTail %u\n", cycleTail);
         el_t truexq = Parents[scalar_xq];
         printf("truexq %u\n", truexq);
-
+        // Could have race conditions in setting pairs.
         printf("Xq %d cycleTail %d\n", truexq, cycleTail);
-        VertexSubset cycleStart = VertexSubset(cycleTail, n); // creates initial frontier
-        while (cycleStart.get_n()){ // loop until a cycle converges.
-            VertexSubset H_BT_Frontier_Int = G.edgeMap(cycleStart, H_SET_CYCLE_F(Parents, Pair, Cycles, truexq), true, 20);
-            printf("H_BT_Frontier_Int\n");
-            H_BT_Frontier_Int.print();
-            cycleStart = H_BT_Frontier_Int;
+        el_t cycleTail_a = Pair[scalar_xq];
+        el_t cycleTail_b = Pair[cycleTail_a];
+        printf("Cycle in H xq %d a %d b %d \n",truexq, cycleTail_a,cycleTail_b);
+        while (cycleTail_a != truexq){
+            Cycles[cycleTail_a] = 1;
+            cycleTail_a = Parents[cycleTail_a];
         }
+        while (cycleTail_b != truexq){
+            Cycles[cycleTail_b] = 1;
+            cycleTail_b = Parents[cycleTail_b];
+        }
+        Cycles[truexq] = 1;
         printf("Cycles\n");
         for (int i = 0; i < V; ++i)
             printf("%d ", Cycles[i]);
@@ -226,7 +237,10 @@ bool CrownReduction<SM>::FindCrown() {
     }
 
     // Check for cycles in I
-    VertexSubset I_Cy = G.edgeMap(I, CYCLE_DETECTION_F(Parents, Pair, Depth), true, 20);
+    lock = -1;
+    CycleEdge_u = -1;
+    CycleEdge_v = -1;
+    VertexSubset I_Cy = G.edgeMap(I, CYCLE_DETECTION_F(Parents, &lock, Depth, &CycleEdge_u, &CycleEdge_v), true, 20);
     if (I_Cy.get_n()){
         q = i;
         printf("I_Cy\n");
@@ -252,17 +266,25 @@ bool CrownReduction<SM>::FindCrown() {
         printf("Xq's child\n");
         xq.print();
         el_t scalar_xq = xq.pop();
+        printf("scalar_xq %u\n", scalar_xq);
         el_t cycleTail = Pair[scalar_xq];
+        printf("cycleTail %u\n", cycleTail);
         el_t truexq = Parents[scalar_xq];
-
+        printf("truexq %u\n", truexq);
+        // Could have race conditions in setting pairs.
         printf("Xq %d cycleTail %d\n", truexq, cycleTail);
-        VertexSubset cycleStart = VertexSubset(cycleTail, n); // creates initial frontier
-        while (cycleStart.get_n()){ // loop until a cycle converges.
-            VertexSubset H_BT_Frontier_Int = G.edgeMap(cycleStart, H_SET_CYCLE_F(Parents, Pair, Cycles, truexq), true, 20);
-            printf("H_BT_Frontier_Int\n");
-            H_BT_Frontier_Int.print();
-            cycleStart = H_BT_Frontier_Int;
+        el_t cycleTail_a = Pair[scalar_xq];
+        el_t cycleTail_b = Pair[cycleTail_a];
+        printf("Cycle in I xq %d a %d b %d \n",truexq, cycleTail_a,cycleTail_b);
+        while (cycleTail_a != truexq){
+            Cycles[cycleTail_a] = 1;
+            cycleTail_a = Parents[cycleTail_a];
         }
+        while (cycleTail_b != truexq){
+            Cycles[cycleTail_b] = 1;
+            cycleTail_b = Parents[cycleTail_b];
+        }
+        Cycles[truexq] = 1;
         printf("Cycles\n");
         for (int i = 0; i < V; ++i)
             printf("%d ", Cycles[i]);
