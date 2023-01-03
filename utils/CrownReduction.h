@@ -118,8 +118,14 @@ bool CrownReduction<SM>::CheckCrown(std::vector<VertexSubset> &H_Set,
                                     std::vector<VertexSubset> &I_Set) {
     std::vector<el_t> H;
     std::vector<el_t> I;
+    bool validCrown = true;
     printf("entered CheckCrown\n");
+    printf("creating H\n");
+
     for (auto H_i : H_Set){
+        if (!H_i.non_empty())
+            continue;
+        H_i.print();
         el_t H_v = H_i.pop();
         printf("check if %u is in vector H\n", H_v);
         if (std::find(H.begin(), H.end(), H_v) != H.end()){
@@ -128,7 +134,12 @@ bool CrownReduction<SM>::CheckCrown(std::vector<VertexSubset> &H_Set,
         }
         H.push_back(H_v);
     }
+    printf("creating I\n");
+
     for (auto I_i : I_Set){
+        if (!I_i.non_empty())
+            continue;
+        I_i.print();
         el_t I_v = I_i.pop();
         printf("check if %u is in vector I\n", I_v);
         if (std::find(I.begin(), I.end(), I_v) != I.end()){
@@ -137,25 +148,23 @@ bool CrownReduction<SM>::CheckCrown(std::vector<VertexSubset> &H_Set,
         }
         I.push_back(I_v);
     }
-    printf("finished creating H and I\n");
-    VertexSubset H_total = VertexSubset(H.back(), V); // creates initial frontier
-    H.pop_back();
-    while(H.size()){
-        H_total.insert(H.back());
-        H.pop_back();
+    printf("finished creating H and I vectors\n");
+    printf("\nH\n");
+    for (auto i: H)
+        std::cout << i << ' ';
+    printf("\nI\n");
+    for (auto i: I)
+        std::cout << i << ' ';
+    for (auto i: I){
+        std::vector<el_t> n_i = G.get_neighbors(i);
+        for (auto n: n_i){
+            if (std::find(H.begin(), H.end(), n) == H.end()){
+                printf("\nvertex %u from I has a neighbor %u which isnt in H\n", i, n);
+                validCrown = false;
+            }
+        }
     }
-    VertexSubset I_total = VertexSubset(I.back(), V); // creates initial frontier
-    I.pop_back();
-    while(I.size()){
-        I_total.insert(I.back());
-        I.pop_back();
-    }
-    printf("H set\n");
-    H_total.print();
-    printf("I set\n");
-    I_total.print();
-    exit(1);
-    return true;
+    return validCrown;
 }
 
 template <typename SM> 
@@ -191,12 +200,10 @@ bool CrownReduction<SM>::FindCrown() {
   std::vector<VertexSubset> H_Set;
   std::vector<VertexSubset> I_Set;
   printf("Starting at %d\n", start);
-  VertexSubset H;
-  VertexSubset I;
+  I_Set.push_back(frontier);
   while (frontier.non_empty()) { // loop until frontier is empty
-    H = G.edgeMap(frontier, H_F(Parents, Cycles, Depth), true, 20);
-    if (H.get_n())
-        H_Set.push_back(H);
+    VertexSubset H = G.edgeMap(frontier, H_F(Parents, Cycles, Depth), true, 20);
+    H_Set.push_back(H);
     printf("H\n");
     H.print();
     lock = -1;
@@ -256,14 +263,13 @@ bool CrownReduction<SM>::FindCrown() {
         return FindCrown();
         // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
         // where x_q−1 ∈ I_q−1 ∩ N(NM(xq)); q = q−1;}
-    } else {
+    } //else {
         ++i;
-        I = G.edgeMap(H, I_F(Parents, Cycles, Depth, match), true, 20);
-        if (I.get_n())
-            I_Set.push_back(I);
+        VertexSubset I = G.edgeMap(H, I_F(Parents, Cycles, Depth, match), true, 20);
         printf("I\n");
         I.print();
-    }
+        I_Set.push_back(I);
+    //}
 
     // Check for cycles in I
     lock = -1;
@@ -330,15 +336,19 @@ bool CrownReduction<SM>::FindCrown() {
     //    ^ added by me    ^ to indicate we are removing some edges 
     // and adding another (others), and not only removing. 
     // the set difference only applies to the {<xq, NM(xq)>}} term.
-    frontier.del();
+    // TODO check if neccessary
+    //frontier.del();
     // Not sure if its this simple
     // Technically need to ensure no previous H vertices are in the frontier.
     // 5.4 else Hi=N(Ii) \ U_j=0..i−1 Hj; } 
     // possible could do a vertex map on frontier depth. though not currently tracking this.
     frontier = I;
   }
+  if (!CheckCrown(H_Set,I_Set))
+        exit(1);
   frontier.del();
   // Add H to the solution
+  /*
   for (auto H_i : H_Set){
     k -= H_i.get_n();
     G.vertexMap(H_i, SET_SOLUTION_H_F(Solution), false); // mark visited
@@ -361,11 +371,12 @@ bool CrownReduction<SM>::FindCrown() {
         G.remove_batch(edgesToRemove, min(b_used, b_size));
     } while(vertices_to_delete.non_empty());
   }
+    */
+
   vertexChanged = true;
   // Return Find-CROWN(G\(I∪H), M\(I∪H), CY, k −|H|), where
   // where HSet and ISet form a crown.
   VertexSubset newRemainingVertices = G.vertexMap(remainingVertices, Update_Remaining_V_F(G), true); // mark visited
   remainingVertices = newRemainingVertices;
-  //CheckCrown(H_Set,I_Set);
   return vertexChanged;
 }
