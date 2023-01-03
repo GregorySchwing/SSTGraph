@@ -182,8 +182,8 @@ bool CrownReduction<SM>::FindCrown() {
     return vertexChanged;
   // choose first free vertex
   // 3. Pick a vertex v ∈V\(V(CY) ∪V(M))arbitrarily;
-  // VertexSubset eligibleStartVertices = G.vertexMap(remainingVertices, GET_UNMATCHED_F(match, Cycles, G), true); // mark visited
-  VertexSubset eligibleStartVertices = G.edgeMap(remainingVertices, GET_START_F(match, Cycles, G), true, 20);
+  VertexSubset eligibleStartVertices = G.vertexMap(remainingVertices, GET_UNMATCHED_F(match, Cycles, G), true); // mark visited
+  //VertexSubset eligibleStartVertices = G.edgeMap(remainingVertices, GET_START_F(match, Cycles, G), true, 20);
   eligibleStartVertices.print();
   if (!eligibleStartVertices.get_n())
     return vertexChanged;

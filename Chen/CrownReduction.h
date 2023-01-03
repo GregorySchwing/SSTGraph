@@ -57,10 +57,11 @@ struct GET_START_F {
   match(_match),
   Cycles(_Cycles) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
-    if (Cycles[s] || match[s] != -1)
+    if (Cycles[s] || match[d] != -1)
       return false;
+    printf("Vertex %d match %d\n", s, match[s]);
     // has at least 1 neighbor to a noncycle vertex.
-    return !Cycles[d];
+    return !Cycles[s];
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
     if (Cycles[s] || match[s] != -1)
@@ -107,7 +108,7 @@ struct I_F {
   Parents(_Parents), Cycles(_Cycles),
   Depth(_Depth), match(_match) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
-    if (Cycles[d] && match[d] == -1)
+    if (Cycles[d])
       return false;
     if (Parents[d] == -1) {
       Parents[d] = s;
@@ -117,14 +118,14 @@ struct I_F {
     return false;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    if (Cycles[d] && match[d] == -1)
+    if (Cycles[d])
       return false;
     return __sync_bool_compare_and_swap(&Parents[d], -1, s) && 
     __sync_bool_compare_and_swap(&Depth[d], -1, Depth[s]+1);
   }
   // cond function checks if vertex has been visited yet
   // also destination should be in M.
-  inline bool cond(uint32_t d) { return (Parents[d] == -1); }
+  inline bool cond(uint32_t d) { return (Parents[d] == -1  && match[d] != -1); }
 };
 
 struct CYCLE_DETECTION_F {
