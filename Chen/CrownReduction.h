@@ -57,13 +57,13 @@ struct GET_START_F {
   match(_match),
   Cycles(_Cycles) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
-    if (Cycles[s] || match[s])
+    if (Cycles[s] || match[s] != -1)
       return false;
     // has at least 1 neighbor to a noncycle vertex.
     return !Cycles[d];
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
-    if (Cycles[s] || match[s])
+    if (Cycles[s] || match[s] != -1)
       return false;
     // has at least 1 neighbor to a noncycle vertex.
     return !Cycles[d];
