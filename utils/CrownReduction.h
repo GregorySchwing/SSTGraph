@@ -144,7 +144,7 @@ bool CrownReduction<SM>::FindCrown() {
   VertexSubset H;
   VertexSubset I;
   while (frontier.non_empty()) { // loop until frontier is empty
-    H = G.edgeMap(frontier, H_F(Parents, Depth), true, 20);
+    H = G.edgeMap(frontier, H_F(Parents, Cycles, Depth), true, 20);
     H_Set.push_back(H);
     printf("H\n");
     H.print();
@@ -207,7 +207,7 @@ bool CrownReduction<SM>::FindCrown() {
         // where x_q−1 ∈ I_q−1 ∩ N(NM(xq)); q = q−1;}
     } else {
         ++i;
-        I = G.edgeMap(H, I_F(Parents, Depth, match), true, 20);
+        I = G.edgeMap(H, I_F(Parents, Cycles, Depth, match), true, 20);
         I_Set.push_back(I);
         printf("I\n");
         I.print();
@@ -236,7 +236,11 @@ bool CrownReduction<SM>::FindCrown() {
         }         
         el_t xq = Parents[CycleEdge_u];  
         Cycles[xq] = 1; 
+        printf("Xq %u\n", xq);
         printf("Cycles\n");
+        for (int i = 0; i < V; ++i)
+            printf("%d ", i);
+        printf("\n");
         for (int i = 0; i < V; ++i)
             printf("%d ", Cycles[i]);
         printf("\n");

@@ -50,9 +50,12 @@ struct GET_UNMATCHED_F {
 
 struct H_F {
   int32_t *Parents;
+  int32_t *Cycles;
   int32_t *Depth;
-  explicit H_F(int32_t *_Parents, int32_t *_Depth) : Parents(_Parents), Depth(_Depth) {}
+  explicit H_F(int32_t *_Parents, int32_t *_Cycles, int32_t *_Depth) : Parents(_Parents), Cycles(_Cycles), Depth(_Depth) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
+    if (Cycles[d])
+      return false;
     if (Parents[d] == -1) {
       Parents[d] = s;
       Depth[d] = Depth[s]+1;
@@ -61,6 +64,8 @@ struct H_F {
     return false;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    if (Cycles[d])
+      return false;
     return __sync_bool_compare_and_swap(&Parents[d], -1, s) && 
     __sync_bool_compare_and_swap(&Depth[d], -1, Depth[s]+1);
   }
@@ -70,10 +75,15 @@ struct H_F {
 
 struct I_F {
   int32_t *Parents;
+  int32_t *Cycles;
   int32_t *Depth;
   int32_t *match;
-  explicit I_F(int32_t *_Parents, int32_t *_Depth, int32_t *_match) : Parents(_Parents), Depth(_Depth), match(_match) {}
+  explicit I_F(int32_t *_Parents, int32_t *_Cycles, int32_t *_Depth, int32_t *_match) : 
+  Parents(_Parents), Cycles(_Cycles),
+  Depth(_Depth), match(_match) {}
   inline bool update(uint32_t s, uint32_t d) { // Update
+    if (Cycles[d])
+      return false;
     if (Parents[d] == -1) {
       Parents[d] = s;
       Depth[d] = Depth[s]+1;
@@ -82,6 +92,8 @@ struct I_F {
     return false;
   }
   inline bool updateAtomic(uint32_t s, uint32_t d) { // atomic version of Update
+    if (Cycles[d])
+      return false;
     return __sync_bool_compare_and_swap(&Parents[d], -1, s) && 
     __sync_bool_compare_and_swap(&Depth[d], -1, Depth[s]+1);
   }
