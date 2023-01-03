@@ -86,6 +86,9 @@ class CrownReduction {
     bool FindCrown();
 
     private:
+        bool CheckCrown(std::vector<VertexSubset> &H_Set,
+                        std::vector<VertexSubset> &I_Set);
+
         SM &G;
         VertexSubset & remainingVertices;
         int32_t* Cycles;
@@ -108,6 +111,51 @@ class CrownReduction {
 template <typename SM> 
 void CrownReduction<SM>::ResetCycles() {
     parallel_for(int64_t i = 0; i < V; i++) { Cycles[i] = 0; }
+}
+
+template <typename SM> 
+bool CrownReduction<SM>::CheckCrown(std::vector<VertexSubset> &H_Set,
+                                    std::vector<VertexSubset> &I_Set) {
+    std::vector<el_t> H;
+    std::vector<el_t> I;
+    printf("entered CheckCrown\n");
+    for (auto H_i : H_Set){
+        el_t H_v = H_i.pop();
+        printf("check if %u is in vector H\n", H_v);
+        if (std::find(H.begin(), H.end(), H_v) != H.end()){
+            printf("vertex %u is in two H_i levels\n", H_v);
+            exit(1);
+        }
+        H.push_back(H_v);
+    }
+    for (auto I_i : I_Set){
+        el_t I_v = I_i.pop();
+        printf("check if %u is in vector I\n", I_v);
+        if (std::find(I.begin(), I.end(), I_v) != I.end()){
+            printf("vertex %u is in two I_i levels\n", I_v);
+            exit(1);
+        }
+        I.push_back(I_v);
+    }
+    printf("finished creating H and I\n");
+    VertexSubset H_total = VertexSubset(H.back(), V); // creates initial frontier
+    H.pop_back();
+    while(H.size()){
+        H_total.insert(H.back());
+        H.pop_back();
+    }
+    VertexSubset I_total = VertexSubset(I.back(), V); // creates initial frontier
+    I.pop_back();
+    while(I.size()){
+        I_total.insert(I.back());
+        I.pop_back();
+    }
+    printf("H set\n");
+    H_total.print();
+    printf("I set\n");
+    I_total.print();
+    exit(1);
+    return true;
 }
 
 template <typename SM> 
@@ -147,7 +195,8 @@ bool CrownReduction<SM>::FindCrown() {
   VertexSubset I;
   while (frontier.non_empty()) { // loop until frontier is empty
     H = G.edgeMap(frontier, H_F(Parents, Cycles, Depth), true, 20);
-    H_Set.push_back(H);
+    if (H.get_n())
+        H_Set.push_back(H);
     printf("H\n");
     H.print();
     lock = -1;
@@ -210,7 +259,8 @@ bool CrownReduction<SM>::FindCrown() {
     } else {
         ++i;
         I = G.edgeMap(H, I_F(Parents, Cycles, Depth, match), true, 20);
-        I_Set.push_back(I);
+        if (I.get_n())
+            I_Set.push_back(I);
         printf("I\n");
         I.print();
     }
@@ -275,8 +325,6 @@ bool CrownReduction<SM>::FindCrown() {
         // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
         // where x_q−1 ∈ I_q−2 ∩ N(NM(xq)); q = q−1;}
         return FindCrown();
-    } else {
-        I_Set.push_back(I);
     }
     // {M={M\{<xq, NM(xq)>}} ∪ {<NM(xq), xq−1>},
     //    ^ added by me    ^ to indicate we are removing some edges 
@@ -318,5 +366,6 @@ bool CrownReduction<SM>::FindCrown() {
   // where HSet and ISet form a crown.
   VertexSubset newRemainingVertices = G.vertexMap(remainingVertices, Update_Remaining_V_F(G), true); // mark visited
   remainingVertices = newRemainingVertices;
+  //CheckCrown(H_Set,I_Set);
   return vertexChanged;
 }

@@ -610,7 +610,7 @@ template <typename SM> int32_t* VC_Reductions::ChenRemoveMaxApproximateMVC(SM &G
       cr.ResetCycles();
       foundCrown = cr.FindCrown();
       //foundStruction = struction.FindStruction();
-      foundDominating = dom.FindDominated();
+      //foundDominating = dom.FindDominated();
 
       printf("foundCrown %s\n", foundCrown ? "true" : "false");
       printf("foundDominating %s\n", foundDominating ? "true" : "false");
