@@ -157,44 +157,21 @@ bool CrownReduction<SM>::FindCrown() {
         q = i;
         printf("H_Cy\n");
         H_Cy.print();
-        // Might be unneccesary to copy.
-        VertexSubset H_BT_Frontier = H_Cy;
-        VertexSubset xq;
-        // Has to be a do while since calling get_n
-        // on an uninitted xq causes a segfault
-        do { // loop until a cycle converges.
-            //VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_F(Parents, Pair), true, 20);
-            //xq = G.vertexMap(H_BT_Frontier_Int, GET_XQ_F(Pair), true); // mark visited
-            VertexSubset H_BT_Frontier_Int = G.edgeMap(H_BT_Frontier, CYCLE_BT_2_F(Parents, Pair), true, 20);
-            // Important to call this on the previous frontier (I_BT_Frontier).
-            // Not the new frontier (I_BT_Frontier_Int) which tenatively contains xq.
-            // We actually find Xq's child, then get the parent outside the loop.
-            xq = G.vertexMap(H_BT_Frontier, GET_XQ_2_F(Pair, Parents), true); // mark visited
-            H_BT_Frontier = H_BT_Frontier_Int;
-        } while (!xq.get_n());
-        // This must be Xq since all the cycles have to be the same depth.
-        printf("Xq's child\n");
-        xq.print();
-        el_t scalar_xq = xq.pop();
-        printf("scalar_xq %u\n", scalar_xq);
-        el_t cycleTail = Pair[scalar_xq];
-        printf("cycleTail %u\n", cycleTail);
-        el_t truexq = Parents[scalar_xq];
-        printf("truexq %u\n", truexq);
-        // Could have race conditions in setting pairs.
-        printf("Xq %d cycleTail %d\n", truexq, cycleTail);
-        el_t cycleTail_a = Pair[scalar_xq];
-        el_t cycleTail_b = Pair[cycleTail_a];
-        printf("Cycle in H xq %d a %d b %d \n",truexq, cycleTail_a,cycleTail_b);
-        while (cycleTail_a != truexq){
-            Cycles[cycleTail_a] = 1;
-            cycleTail_a = Parents[cycleTail_a];
-        }
-        while (cycleTail_b != truexq){
-            Cycles[cycleTail_b] = 1;
-            cycleTail_b = Parents[cycleTail_b];
-        }
-        Cycles[truexq] = 1;
+        printf("cycle edge %u %u\n", CycleEdge_u, CycleEdge_v);
+        Cycles[CycleEdge_u] = 1;
+        Cycles[CycleEdge_v] = 1;
+        while (Parents[CycleEdge_u] != Parents[CycleEdge_v]){
+            printf("%u -> %u\n", CycleEdge_u, Parents[CycleEdge_u]);
+            printf("%u -> %u\n", CycleEdge_v, Parents[CycleEdge_v]);
+
+            CycleEdge_u = Parents[CycleEdge_u];
+            CycleEdge_v = Parents[CycleEdge_v];
+            Cycles[CycleEdge_u] = 1;
+            Cycles[CycleEdge_v] = 1;
+        }         
+        el_t xq = Parents[CycleEdge_u];  
+        Cycles[xq] = 1; 
+        printf("Xq %u\n", xq);
         printf("Cycles\n");
         for (int i = 0; i < V; ++i)
             printf("%d ", Cycles[i]);
@@ -204,24 +181,24 @@ bool CrownReduction<SM>::FindCrown() {
         // The point is just to flip the parity of the edges 
         // that are in the matching from xq,child[xq] to start
         el_t counter = 0;            
-        while(scalar_xq != start){
+        while(xq != start){
             // Only on first time do I just turn myself off.
             if (!counter){
-                match[scalar_xq] = -1;
+                match[xq] = -1;
                 counter++;
-                scalar_xq = Parents[scalar_xq];
+                xq = Parents[xq];
             // Only on odd counters do I match with parent.
             } else {
                 if (counter % 2 == 1){
-                    el_t parent = Parents[scalar_xq];  
-                    match[scalar_xq] = parent;
-                    match[parent] = scalar_xq;
-                    scalar_xq = parent;   
+                    el_t parent = Parents[xq];  
+                    match[xq] = parent;
+                    match[parent] = xq;
+                    xq = parent;   
                     counter++; 
                 } else {
                     counter++; 
-                    el_t parent = Parents[scalar_xq]; 
-                    scalar_xq = parent;   
+                    el_t parent = Parents[xq]; 
+                    xq = parent;   
                 }
             }
         }   
@@ -245,46 +222,20 @@ bool CrownReduction<SM>::FindCrown() {
         q = i;
         printf("I_Cy\n");
         I_Cy.print();
-        // Check for cycles in I
-        VertexSubset I_BT_Frontier = I_Cy;
-        VertexSubset xq;
-        // Has to be a do while since calling get_n
-        // on an uninitted xq causes a segfault
-        do { // loop until a cycle converges.
-            VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_2_F(Parents, Pair), true, 20);
-            //VertexSubset I_BT_Frontier_Int = G.edgeMap(I_BT_Frontier, CYCLE_BT_F(Parents, Pair), true, 20);
-            //xq = G.vertexMap(I_BT_Frontier_Int, GET_XQ_F(Pair), true); // mark visited
-            
-            // Important to call this on the previous frontier (I_BT_Frontier).
-            // Not the new frontier (I_BT_Frontier_Int) which tenatively contains xq.
-            // We actually find Xq's child, then get the parent outside the loop.
-            xq = G.vertexMap(I_BT_Frontier, GET_XQ_2_F(Pair, Parents), true); // mark visited
+        printf("cycle edge %u %u\n", CycleEdge_u, CycleEdge_v);
+        Cycles[CycleEdge_u] = 1;
+        Cycles[CycleEdge_v] = 1;
+        while (Parents[CycleEdge_u] != Parents[CycleEdge_v]){
+            printf("%u -> %u\n", CycleEdge_u, Parents[CycleEdge_u]);
+            printf("%u -> %u\n", CycleEdge_v, Parents[CycleEdge_v]);
 
-            I_BT_Frontier = I_BT_Frontier_Int;
-        } while (!xq.get_n());
-        // This must be Xq since all the cycles have to be the same depth.
-        printf("Xq's child\n");
-        xq.print();
-        el_t scalar_xq = xq.pop();
-        printf("scalar_xq %u\n", scalar_xq);
-        el_t cycleTail = Pair[scalar_xq];
-        printf("cycleTail %u\n", cycleTail);
-        el_t truexq = Parents[scalar_xq];
-        printf("truexq %u\n", truexq);
-        // Could have race conditions in setting pairs.
-        printf("Xq %d cycleTail %d\n", truexq, cycleTail);
-        el_t cycleTail_a = Pair[scalar_xq];
-        el_t cycleTail_b = Pair[cycleTail_a];
-        printf("Cycle in I xq %d a %d b %d \n",truexq, cycleTail_a,cycleTail_b);
-        while (cycleTail_a != truexq){
-            Cycles[cycleTail_a] = 1;
-            cycleTail_a = Parents[cycleTail_a];
-        }
-        while (cycleTail_b != truexq){
-            Cycles[cycleTail_b] = 1;
-            cycleTail_b = Parents[cycleTail_b];
-        }
-        Cycles[truexq] = 1;
+            CycleEdge_u = Parents[CycleEdge_u];
+            CycleEdge_v = Parents[CycleEdge_v];
+            Cycles[CycleEdge_u] = 1;
+            Cycles[CycleEdge_v] = 1;
+        }         
+        el_t xq = Parents[CycleEdge_u];  
+        Cycles[xq] = 1; 
         printf("Cycles\n");
         for (int i = 0; i < V; ++i)
             printf("%d ", Cycles[i]);
@@ -294,24 +245,24 @@ bool CrownReduction<SM>::FindCrown() {
         // The point is just to flip the parity of the edges 
         // that are in the matching from xq,child[xq] to start
         el_t counter = 0;            
-        while(scalar_xq != start){
+        while(xq != start){
             // Only on first time do I just turn myself off.
             if (!counter){
-                match[scalar_xq] = -1;
+                match[xq] = -1;
                 counter++;
-                scalar_xq = Parents[scalar_xq];
+                xq = Parents[xq];
             // Only on odd counters do I match with parent.
             } else {
                 if (counter % 2 == 1){
-                    el_t parent = Parents[scalar_xq];  
-                    match[scalar_xq] = parent;
-                    match[parent] = scalar_xq;
-                    scalar_xq = parent;   
+                    el_t parent = Parents[xq];  
+                    match[xq] = parent;
+                    match[parent] = xq;
+                    xq = parent;   
                     counter++; 
                 } else {
                     counter++; 
-                    el_t parent = Parents[scalar_xq]; 
-                    scalar_xq = parent;   
+                    el_t parent = Parents[xq]; 
+                    xq = parent;   
                 }
             }
         }   
